@@ -1,13 +1,18 @@
-class IdModel {
+class UIModel {
     #id;
+    #ui;
     constructor(id) {
         this.#id = id;
+        this.#ui = $('[data-element-id="' + id + '"]');
     }
     get getId() {
         return this.#id;
     }
+    get getUI() {
+        return this.#ui;
+    }
 }
-class BPMNModel extends IdModel {
+class BPMNModel extends UIModel {
     #processes = {};
     #messages = {};
 
@@ -31,7 +36,7 @@ class BPMNModel extends IdModel {
     }
 }
 
-class Process extends IdModel {
+class Process extends UIModel {
     #nodes = {};
     #edges = {};
     #starts = null;
@@ -74,7 +79,7 @@ class Process extends IdModel {
     }
 }
 
-class Node extends IdModel {
+class Node extends UIModel {
     #type;
     #incoming = {};
     #outgoing ={};
@@ -118,7 +123,7 @@ class Gateway extends Node {
 class Start extends Node { }
 class End extends Node { }
 
-class Edge extends IdModel {
+class Edge extends UIModel {
     #source;
     #target;
     constructor(id, source, target) {

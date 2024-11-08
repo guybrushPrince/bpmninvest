@@ -7,10 +7,11 @@ let extractDiagram = function (diagram, index) {
 
     let getOrCreateNode = function (id, type) {
         if (!(id in nodes)) {
-            if (id.startsWith('Activity')) nodes[id] = new Task(id, type);
-            else if (id.startsWith('Start')) nodes[id] = new Start(id, type);
-            else if (id.startsWith('End')) nodes[id] = new End(id, type);
-            else if (id.startsWith('Gateway')) nodes[id] = new Gateway(id, type);
+            if (type.includes('Task')) nodes[id] = new Task(id, type);
+            else if (type.includes('Start')) nodes[id] = new Start(id, type);
+            else if (type.includes('End')) nodes[id] = new End(id, type);
+            else if (type.includes('Gateway')) nodes[id] = new Gateway(id, type);
+            else console.log([id, type]);
         }
         return nodes[id];
     };
@@ -30,8 +31,8 @@ let extractDiagram = function (diagram, index) {
 
     let findElements = function (p, elements) {
         elements.forEach(function (el) {
-            let id = el.id;
-            if (id.startsWith('Flow')) {
+            let type = el.$type;
+            if (type.includes('SequenceFlow')) {
                 p.addEdge(getOrCreateEdge(el));
             } else { // It is a node
                 p.addNode(getOrCreateDetailedNode(el));
@@ -66,18 +67,23 @@ let extractDiagram = function (diagram, index) {
     return m;
 };
 
-if (typeof bpmnio !== 'undefined') {
-    if ('modeler' in bpmnio) {
-        let modeler = bpmnio.modeler;
-        if ('_definitions' in modeler) {
-            let definitions = modeler._definitions;
-            if ('diagrams' in definitions) {
-                let diagrams = definitions.diagrams;
-                if (Array.isArray(diagrams)) {
-                    let exp = diagrams.map(extractDiagram);
-                    console.log(exp);
-                }
+let analyze = function () {
+    let modeler = null;
+    if (typeof bpmnio !== 'undefined') {
+        if ('modeler' in bpmnio) {
+            modeler = bpmnio.modeler;
+        }
+    } else if (typeof bpmnModeler !== undefined) {
+        modeler = bpmnModeler;
+    }
+    if ('_definitions' in modeler) {
+        let definitions = modeler._definitions;
+        if ('diagrams' in definitions) {
+            let diagrams = definitions.diagrams;
+            if (Array.isArray(diagrams)) {
+                let exp = diagrams.map(extractDiagram);
+                console.log(exp);
             }
         }
     }
-}
+};
