@@ -11,6 +11,9 @@ class UIModel {
     get getUI() {
         return this.#ui;
     }
+    setUI(ui) {
+        this.#ui = ui;
+    }
 }
 class BPMNModel extends UIModel {
     #processes = {};
@@ -34,6 +37,13 @@ class BPMNModel extends UIModel {
     setMessages(messages) {
         this.#messages = messages;
     }
+
+    asDot() {
+        let c = 'digraph G {';
+        c += Object.values(this.#processes).map((p) => p.asDot()).join("\n");
+        c += '}';
+        return c;
+    }
 }
 
 class Process extends UIModel {
@@ -54,6 +64,15 @@ class Process extends UIModel {
         this.#edges[edge.getId] = edge;
     }
 
+    replaceNode(node, nNode, reset = true) {
+        this.#nodes[node.getId] = nNode;
+        Object.values(this.#edges).forEach((edge) => {
+            if (edge.getSource.getId === node.id) edge.setSource(nNode);
+            if (edge.getTarget.getId === node.id) edge.setTarget(nNode);
+        });
+        if (reset) this.resetInOut();
+    }
+
     get getStarts() {
         if (this.#starts === null) {
             this.#starts = Object.values(this.#nodes).filter((n) => (n instanceof Start));
@@ -67,15 +86,27 @@ class Process extends UIModel {
         return this.#starts;
     }
 
-    computeInOut() {
+    resetInOut() {
         for (const node of Object.values(this.#nodes)) {
             node.setIncoming({});
             node.setOutgoing({});
         }
+    }
+
+    computeInOut() {
+        this.resetInOut();
         for (const edge of Object.values(this.#edges)) {
             edge.getSource.addOutgoing(edge);
             edge.getTarget.addIncoming(edge);
         }
+    }
+
+    asDot() {
+        let c = 'subgraph cluster_' + this.getId.replaceAll('-', '_') + ' {';
+        c += Object.values(this.#nodes).map((n) => n.asDot()).join("\n");
+        c += Object.values(this.#edges).map((e) => e.asDot()).join("\n");
+        c += '}';
+        return c;
     }
 }
 
@@ -99,6 +130,10 @@ class Node extends UIModel {
 
     addIncoming(i) { this.#incoming[i.getId] = i; }
     addOutgoing(o) { this.#outgoing[o.getId] = o; }
+
+    asDot() {
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=box,label="Activity"];';
+    }
 }
 
 class Task extends Node { }
@@ -109,19 +144,49 @@ const GatewayType = {
 }
 class Gateway extends Node {
     #kind;
-    constructor(id, type) {
+    constructor(id, type, kind = null) {
         super(id, type);
-        if (type.startsWith('bpmn:Parallel')) this.#kind = GatewayType.AND;
-        else if (type.startsWith('bpmn:Exclusive')) this.#kind = GatewayType.XOR;
-        else if (type.startsWith('bpmn:Inclusive')) this.#kind = GatewayType.OR;
+        if (kind === null) {
+            if (type.startsWith('bpmn:Parallel')) this.#kind = GatewayType.AND;
+            else if (type.startsWith('bpmn:Exclusive')) this.#kind = GatewayType.XOR;
+            else if (type.startsWith('bpmn:Inclusive')) this.#kind = GatewayType.OR;
+        } else this.#kind = kind;
     }
 
     get getKind() {
         return this.#kind;
     }
+
+    asDot() {
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=diamond,label="' + this.#kind + '"];';
+    }
 }
-class Start extends Node { }
-class End extends Node { }
+const EventType = {
+    MESSAGE: 'MESSAGE',
+    SIGNAL: 'SIGNAL',
+    CONDITIONAL: 'CONDITIONAL',
+    TIMER: 'TIMER'
+};
+class Start extends Node {
+    #event = null;
+
+    setEvent(event) {
+        this.#event = event;
+    }
+    get getEvent() {
+        return this.#event;
+    }
+
+    asDot() {
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=circle,label="Start"];';
+    }
+}
+class End extends Node {
+
+    asDot() {
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=doublecircle,label="End"];';
+    }
+}
 
 class Edge extends UIModel {
     #source;
@@ -137,6 +202,16 @@ class Edge extends UIModel {
     }
     get getTarget() {
         return this.#target;
+    }
+    setSource(source) {
+        this.#source = source;
+    }
+    setTarget(target) {
+        this.#target = target;
+    }
+
+    asDot() {
+        return 'node' + this.#source.getId.replaceAll('-', '_') + ' -> ' + 'node' + this.#target.getId.replaceAll('-', '_') + ';';
     }
 }
 

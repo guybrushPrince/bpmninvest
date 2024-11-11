@@ -16,7 +16,18 @@ let extractDiagram = function (diagram, index) {
         return nodes[id];
     };
     let getOrCreateDetailedNode = function (node) {
-        return getOrCreateNode(node.id, node.$type);
+        let n = getOrCreateNode(node.id, node.$type);
+        if (n instanceof Start) {
+            if ('eventDefinitions' in node && Array.isArray(node.eventDefinitions)) {
+                for (let ev of node.eventDefinitions) {
+                    if (ev.$type.includes('Timer')) n.setEvent(EventType.TIMER);
+                    else if (ev.$type.includes('Conditional')) n.setEvent(EventType.CONDITIONAL);
+                    else if (ev.$type.includes('Message')) n.setEvent(EventType.MESSAGE);
+                    else if (ev.$type.includes('Signal')) n.setEvent(EventType.SIGNAL);
+                }
+            }
+        }
+        return n;
     };
     let getOrCreateEdge = function (flow) {
         let id = flow.id;
@@ -83,7 +94,9 @@ let analyze = function () {
             if (Array.isArray(diagrams)) {
                 let exp = diagrams.map(extractDiagram);
                 console.log(exp);
+                return exp;
             }
         }
     }
+    return null;
 };
