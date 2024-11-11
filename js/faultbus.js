@@ -7,6 +7,9 @@ let FaultType = {
 
 let faultBus = (function () {
     function FaultBus() {
+        this.addInfo = function (process, elements, fault) {
+            console.log([process, elements, fault]);
+        };
         this.addWarning = function (process, elements, fault) {
             console.log([process, elements, fault]);
         };

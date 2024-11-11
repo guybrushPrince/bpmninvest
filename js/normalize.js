@@ -22,6 +22,8 @@ let Normalizer = function () {
                 process.computeInOut();
                 normalizeEnds(process);
                 process.computeInOut();
+                normalizeGateways(process);
+                process.computeInOut();
             }
         };
 
@@ -36,7 +38,7 @@ let Normalizer = function () {
             }
 
             let implicitStarts = starts.filter((n) => !(n instanceof Start));
-            implicitStarts.forEach((n) => faultBus.addWarning(process, [n], FaultType.IMPLICIT_START));
+            implicitStarts.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_START));
             let explicitStarts = starts.filter((n) => (n instanceof Start));
 
             // By the BPMN spec, start events are mutually explicit.
@@ -83,14 +85,14 @@ let Normalizer = function () {
             }
 
             // Replace each explicit start with multiple outgoing flows with an AND gateway.
-            explicitStarts.forEach((start) => {
+            explicitStarts.forEach(function (start) {
                 if (Object.values(start.getOutgoing).length >= 2) {
                     let nStart = new Gateway(start.getId, null, GatewayType.AND);
                     nStart.setUI(start.getUI);
                     process.replaceNode(start, nStart);
                 }
             });
-        }
+        };
 
         let normalizeEnds = function (process) {
             // Detect implicit end nodes
@@ -103,7 +105,7 @@ let Normalizer = function () {
             }
 
             let implicitEnds = ends.filter((n) => !(n instanceof End));
-            implicitEnds.forEach((n) => faultBus.addWarning(process, [n], FaultType.IMPLICIT_END));
+            implicitEnds.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_END));
 
             // By the BPMN spec, p. 248, a process is in a running state until all tokens are consumed.
             // If an end event has multiple incoming flows, then they can be inclusive.
@@ -114,7 +116,7 @@ let Normalizer = function () {
                 or = new Gateway('n' + elementId++, null, GatewayType.OR);
                 or.setUI(ends.map((e) => e.getUI));
                 process.addNode(or);
-                ends.forEach((end) => {
+                ends.forEach(function (end) {
                     if (end instanceof End && Object.values(end.getIncoming).length >= 2) {
                         // If an end event has multiple incoming flows, make the joining behavior explicit.
                         let nEnd = new Gateway(end.getId, null, GatewayType.OR);
@@ -124,7 +126,7 @@ let Normalizer = function () {
                     }
                     let sf = new Edge('n' + elementId++, end, or);
                     process.addEdge(sf);
-                })
+                });
             }
             if (or === null) {
                 let end = ends[0];
@@ -142,7 +144,24 @@ let Normalizer = function () {
                 process.addNode(end);
                 process.addEdge(new Edge('n' + elementId++, or, end));
             }
-        }
+        };
+
+        let normalizeGateways = function(process) {
+            let gateways = Object.values(process.getNodes).filter((n) => (n instanceof Gateway));
+            console.log(gateways);
+            gateways.forEach(function (g) {
+                if (Object.values(g.getOutgoing).length >= 2 && Object.values(g.getIncoming).length >= 2) {
+                    console.log(g);
+                    // Split the gateway into two.
+                    let n = new Gateway('n' + elementId++, null, g.getKind);
+                    process.addNode(n);
+                    Object.values(g.getOutgoing).forEach(function (e) {
+                        e.setSource(n);
+                    });
+                    process.addEdge(new Edge('n' + elementId++, g, n));
+                }
+            });
+        };
     }
 
     return new NormalizerFactory();

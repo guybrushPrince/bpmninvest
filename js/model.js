@@ -87,18 +87,18 @@ class Process extends UIModel {
     }
 
     resetInOut() {
-        for (const node of Object.values(this.#nodes)) {
+        Object.values(this.#nodes).forEach(function (node) {
             node.setIncoming({});
             node.setOutgoing({});
-        }
+        });
     }
 
     computeInOut() {
         this.resetInOut();
-        for (const edge of Object.values(this.#edges)) {
+        Object.values(this.#edges).forEach(function (edge) {
             edge.getSource.addOutgoing(edge);
             edge.getTarget.addIncoming(edge);
-        }
+        });
     }
 
     asDot() {
