@@ -51,10 +51,13 @@ class Process extends UIModel {
     #edges = {};
     #starts = null;
     #ends = null;
+
+    #loops = null;
+
     get getNodes() {
         return this.#nodes;
     }
-    get getTarget() {
+    get getEdges() {
         return this.#edges;
     }
     addNode(node) {
@@ -85,6 +88,15 @@ class Process extends UIModel {
         }
         return this.#starts;
     }
+    get getLoops() {
+        if (this.#loops === null) this.#loops = SCC().analyze(this);
+        return this.#loops;
+    }
+
+    setLoops(loops) {
+        this.#loops = loops;
+    }
+
 
     resetInOut() {
         Object.values(this.#nodes).forEach(function (node) {
