@@ -66,9 +66,9 @@ class Process extends UIModel {
 
     replaceNode(node, nNode, reset = true) {
         this.#nodes[node.getId] = nNode;
-        Object.values(this.#edges).forEach((edge) => {
-            if (edge.getSource.getId === node.id) edge.setSource(nNode);
-            if (edge.getTarget.getId === node.id) edge.setTarget(nNode);
+        Object.values(this.#edges).forEach(function(edge) {
+            if (edge.getSource.getId === node.getId) edge.setSource(nNode);
+            if (edge.getTarget.getId === node.getId) edge.setTarget(nNode);
         });
         if (reset) this.resetInOut();
     }

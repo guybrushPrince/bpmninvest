@@ -22,7 +22,10 @@ let Normalizer = function () {
                 process.computeInOut();
                 normalizeEnds(process);
                 process.computeInOut();
+                normalizeStartAndEnds(process);
                 normalizeGateways(process);
+                process.computeInOut();
+                normalizeTasks(process);
                 process.computeInOut();
             }
         };
@@ -89,7 +92,7 @@ let Normalizer = function () {
                 if (Object.values(start.getOutgoing).length >= 2) {
                     let nStart = new Gateway(start.getId, null, GatewayType.AND);
                     nStart.setUI(start.getUI);
-                    process.replaceNode(start, nStart);
+                    process.replaceNode(start, nStart, false);
                 }
             });
         };
@@ -121,7 +124,7 @@ let Normalizer = function () {
                         // If an end event has multiple incoming flows, make the joining behavior explicit.
                         let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                         nEnd.setUI(end.getUI);
-                        process.replaceNode(end, nEnd);
+                        process.replaceNode(end, nEnd, false);
                         end = nEnd;
                     }
                     let sf = new Edge('n' + elementId++, end, or);
@@ -134,7 +137,7 @@ let Normalizer = function () {
                 if (end instanceof End && Object.values(end.getIncoming).length >= 2) {
                     let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                     nEnd.setUI(end.getUI);
-                    process.replaceNode(end, nEnd);
+                    process.replaceNode(end, nEnd, false);
                 }
             }
 
@@ -146,19 +149,64 @@ let Normalizer = function () {
             }
         };
 
-        let normalizeGateways = function(process) {
+        let normalizeStartAndEnds = function (process) {
+            let startEnds = Object.values(process.getNodes).filter((n) => (n instanceof Start || n instanceof End));
+            startEnds.forEach(function (s) {
+                if ((s instanceof Start && Object.values(s.getIncoming).length >= 1) ||
+                    (s instanceof End && Object.values(s.getOutgoing).length >= 1)) {
+                    let nS = new Task(s.getId, s.className);
+                    nS.setUI(s.getUI);
+                    process.replaceNode(s, nS, false);
+                    nS.setIncoming(s.getIncoming);
+                    nS.setOutgoing(s.getOutgoing);
+                }
+            });
+        }
+
+        let normalizeGateways = function (process) {
             let gateways = Object.values(process.getNodes).filter((n) => (n instanceof Gateway));
-            console.log(gateways);
             gateways.forEach(function (g) {
                 if (Object.values(g.getOutgoing).length >= 2 && Object.values(g.getIncoming).length >= 2) {
-                    console.log(g);
                     // Split the gateway into two.
                     let n = new Gateway('n' + elementId++, null, g.getKind);
+                    n.setUI(g.getUI);
                     process.addNode(n);
                     Object.values(g.getOutgoing).forEach(function (e) {
                         e.setSource(n);
                     });
                     process.addEdge(new Edge('n' + elementId++, g, n));
+                }
+            });
+        };
+
+        let normalizeTasks = function (process) {
+            let tasks = Object.values(process.getNodes).filter((n) => (n instanceof Task));
+            tasks.forEach(function (t) {
+                // Following p. 151 of the BPMN spec, an activity with multiple incoming flows
+                // will always be instantiated when a token is on an incoming flow. I.e., if there
+                // are two incoming flows with a token of each of them, the activity is executed twice.
+                // We model that with an XOR gateway.
+                if (Object.values(t.getIncoming).length >= 2) {
+                    let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
+                    g.setUI(t.getUI);
+                    process.addNode(g);
+                    Object.values(t.getIncoming).forEach(function (e) {
+                        e.setTarget(g);
+                    });
+                    process.addEdge(new Edge('n' + elementId++, g, t));
+                }
+                // Following p. 151 of the BPMN spec, an activity with multiple outgoing flows
+                // will place a token on all its outgoing flows. We model this explicitly with an
+                // AND gateway.
+                if (Object.values(t.getOutgoing).length >= 2) {
+                    // Split the gateway into two.
+                    let g = new Gateway('n' + elementId++, null, GatewayType.AND);
+                    g.setUI(t.getUI);
+                    process.addNode(g);
+                    Object.values(t.getOutgoing).forEach(function (e) {
+                        e.setSource(g);
+                    });
+                    process.addEdge(new Edge('n' + elementId++, t, g));
                 }
             });
         };
