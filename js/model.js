@@ -66,6 +66,12 @@ class Process extends UIModel {
     addEdge(edge) {
         this.#edges[edge.getId] = edge;
     }
+    setNodes(nodes) {
+        this.#nodes = nodes;
+    }
+    setEdges(edges) {
+        this.#edges = edges;
+    }
 
     replaceNode(node, nNode, reset = true) {
         this.#nodes[node.getId] = nNode;
@@ -102,6 +108,8 @@ class Process extends UIModel {
         Object.values(this.#nodes).forEach(function (node) {
             node.setIncoming({});
             node.setOutgoing({});
+            node.setPreset({});
+            node.setPostset({});
         });
     }
 
@@ -110,6 +118,8 @@ class Process extends UIModel {
         Object.values(this.#edges).forEach(function (edge) {
             edge.getSource.addOutgoing(edge);
             edge.getTarget.addIncoming(edge);
+            edge.getSource.addPostset(edge.getTarget);
+            edge.getTarget.addPreset(edge.getSource);
         });
     }
 
@@ -121,11 +131,14 @@ class Process extends UIModel {
         return c;
     }
 }
+class LoopProcess extends Process {}
 
 class Node extends UIModel {
     #type;
     #incoming = {};
-    #outgoing ={};
+    #outgoing = {};
+    #preset = {};
+    #postset = {};
     constructor(id, type) {
         super(id);
         this.#type = type;
@@ -143,12 +156,53 @@ class Node extends UIModel {
     addIncoming(i) { this.#incoming[i.getId] = i; }
     addOutgoing(o) { this.#outgoing[o.getId] = o; }
 
+    get getPreset() { return this.#preset; }
+    get getPostset() { return this.#postset; }
+
+    setPreset(preset) { this.#preset = preset; }
+    setPostset(postset) { this.#postset = postset; }
+
+    addPreset(i) { this.#preset[i.getId] = i; }
+    addPostset(o) { this.#postset[o.getId] = o; }
+
+    get copy() {
+        return new Node(this.getId, this.getType);
+    }
+
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=box,label="Activity"];';
     }
 }
 
-class Task extends Node { }
+class Task extends Node {
+    get copy() {
+        return new Task(this.getId, this.getType);
+    }
+}
+class VirtualTask extends Node {
+    constructor(id) {
+        super(id, 'VirtualTask');
+    }
+    get copy() {
+        return new VirtualTask(this.getId);
+    }
+
+    asDot() {
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=egg,label="Virtual"];';
+    }
+}
+
+class LoopTask extends Task {
+    #loop;
+    constructor(id, loop) {
+        super(id, 'LoopNode');
+        this.#loop = loop;
+    }
+    asDot() {
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=box3d,label="' + this.#loop.getId + '"];';
+    }
+}
+
 const GatewayType = {
     AND: 'AND',
     XOR: 'XOR',
@@ -167,6 +221,10 @@ class Gateway extends Node {
 
     get getKind() {
         return this.#kind;
+    }
+
+    get copy() {
+        return new Gateway(this.getId, this.getType, this.#kind);
     }
 
     asDot() {
@@ -189,11 +247,21 @@ class Start extends Node {
         return this.#event;
     }
 
+    get copy() {
+        let start = new Start(this.getId, this.getType);
+        start.#event = this.#event;
+        return start;
+    }
+
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=circle,label="Start"];';
     }
 }
 class End extends Node {
+
+    get copy() {
+        return new End(this.getId, this.getType);
+    }
 
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=doublecircle,label="End"];';
@@ -228,3 +296,92 @@ class Edge extends UIModel {
 }
 
 class MessageFlow extends Edge { }
+
+class Loop extends UIModel {
+    #nodes = {};
+    #entries = {};
+    #exits = {};
+    #doBody = null;
+    #process = null;
+    constructor(id, process) {
+        super(id);
+        this.#process = process;
+    }
+
+    get getNodes() {
+        return this.#nodes;
+    }
+    get getEntries() {
+        return this.#entries;
+    }
+    get getExits() {
+        return this.#exits;
+    }
+
+    addNode(node) {
+        this.#nodes[node.getId] = node;
+    }
+    addEntry(node) {
+        this.#entries[node.getId] = node;
+    }
+    addEntries(entries) {
+        this.#entries = union(this.#entries, entries);
+    }
+    addExit(node) {
+        this.#entries[node.getId] = node;
+    }
+    addExits(exits) {
+        this.#exits = union(this.#exits, exits);
+    }
+    setProcess(process) {
+        this.#process = process;
+    }
+
+    get getDoBody() {
+        if (this.#doBody !== null) return this.#doBody;
+        this.#process.computeInOut();
+
+        let workingList = Object.assign({}, this.#entries);
+        let doBody = Object.assign({}, workingList);
+        let cut = {};
+        Object.values(this.#exits).forEach(function(e) {
+            cut = union(cut, e.getPostset);
+        });
+        let it = 0;
+        while (Object.values(workingList).length !== 0) {
+            let curId = Object.keys(workingList)[0];
+            let cur = workingList[curId];
+            delete workingList[curId];
+            let next = intersect(diff(cur.getPostset, union(cut, doBody)), this.#nodes);
+            doBody = union(doBody, next);
+            workingList = union(workingList, next);
+            it++;
+            if (it > 100) break;
+        }
+        this.#doBody = doBody;
+
+        // By
+        //
+        // Prinz, T. M., Choi, Y. & Ha, N. L. (2024).
+        // Soundness unknotted: An efficient soundness checking algorithm for arbitrary cyclic process models by loosening loops.
+        // DOI: https://doi.org/10.1016/j.is.2024.102476
+        //
+        // a so-called "back join" cannot be an AND
+        Object.values(doBody).forEach(node => {
+            if (node instanceof Gateway) {
+                if (!(node.getId in this.getEntries)) {
+                    let isBackJoin = Object.values(node.getPreset).filter(p => !(p.getId in doBody)).length >= 1;
+                    if (isBackJoin && node.getKind === GatewayType.AND) {
+                        faultBus.addError(
+                            this.#process,
+                            { backJoin: node, loop: this },
+                            FaultType.LOOP_BACK_JOIN_IS_AND
+                        );
+                    }
+                }
+            }
+        });
+
+        return doBody;
+    }
+}

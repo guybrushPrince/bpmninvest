@@ -2,20 +2,25 @@
  * This function gets a BPMN model as input and normalizes the graphs, i.e., it:
  * 1. Inserts
  */
-let Normalizer = function () {
+let Normalizer = (function () {
+
     function NormalizerFactory() {
         let elementId = 1;
+        this.withFaults = true;
+        let that = this;
 
-        this.normalize = function (bpmn) {
+        this.normalize = function (bpmn, withFaults = true) {
+            that.withFaults = withFaults;
             if (!Array.isArray(bpmn)) bpmn = [bpmn];
             bpmn.forEach((bpmn) => {
                 if (bpmn instanceof BPMNModel) {
-                    bpmn.getProcesses.forEach(normalizeProcess);
+                    bpmn.getProcesses.forEach(this.normalizeProcess);
                 }
             });
             return bpmn;
         };
-        let normalizeProcess = function (process) {
+        this.normalizeProcess = function (process, withFaults = that.withFaults) {
+            that.withFaults = withFaults;
             if (process instanceof Process) {
                 process.computeInOut();
                 normalizeStarts(process);
@@ -27,6 +32,8 @@ let Normalizer = function () {
                 process.computeInOut();
                 normalizeTasks(process);
                 process.computeInOut();
+                normalizeFlows(process);
+                process.computeInOut();
             }
         };
 
@@ -35,13 +42,15 @@ let Normalizer = function () {
             let starts =
                 Object.values(process.getNodes).filter((n) => Object.values(n.getIncoming).length === 0);
 
-            if (starts.length === 0) {
+            if (starts.length === 0 && that.withFaults) {
                 faultBus.addError(process, [], FaultType.NO_START);
                 return;
             }
 
             let implicitStarts = starts.filter((n) => !(n instanceof Start));
-            implicitStarts.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_START));
+            if (that.withFaults) {
+                implicitStarts.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_START));
+            }
             let explicitStarts = starts.filter((n) => (n instanceof Start));
 
             // By the BPMN spec, start events are mutually explicit.
@@ -102,13 +111,15 @@ let Normalizer = function () {
             let ends =
                 Object.values(process.getNodes).filter((n) => Object.values(n.getOutgoing).length === 0);
 
-            if (ends.length === 0) {
+            if (ends.length === 0 && that.withFaults) {
                 faultBus.addError(process, [], FaultType.NO_END);
                 return;
             }
 
             let implicitEnds = ends.filter((n) => !(n instanceof End));
-            implicitEnds.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_END));
+            if (that.withFaults) {
+                implicitEnds.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_END));
+            }
 
             // By the BPMN spec, p. 248, a process is in a running state until all tokens are consumed.
             // If an end event has multiple incoming flows, then they can be inclusive.
@@ -116,7 +127,7 @@ let Normalizer = function () {
 
             let or = null;
             if (ends.length >= 2) {
-                or = new Gateway('n' + elementId++, null, GatewayType.OR);
+                or = new Gateway('n' + elementId++, null, (that.withFaults ? GatewayType.OR : GatewayType.XOR));
                 or.setUI(ends.map((e) => e.getUI));
                 process.addNode(or);
                 ends.forEach(function (end) {
@@ -175,7 +186,13 @@ let Normalizer = function () {
                         e.setSource(n);
                     });
                     process.addEdge(new Edge('n' + elementId++, g, n));
-                }
+                }/* else if (Object.values(g.getOutgoing).length === 1 && Object.values(g.getIncoming).length === 1) {
+                    // Replace it with a task
+                    if (that.withFaults) faultBus.addWarning(process, g, FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS);
+                    let t = new Task(g.getId, g.getType);
+                    t.setUI(g.getUI);
+                    process.replaceNode(g, t);
+                }*/
             });
         };
 
@@ -210,7 +227,24 @@ let Normalizer = function () {
                 }
             });
         };
+
+        let normalizeFlows = function (process) {
+            let gateways = Object.values(process.getNodes).filter(n => n instanceof Gateway);
+            gateways.forEach(function (g) {
+                Object.values(g.getOutgoing).forEach(e => {
+                    let s = e.getTarget;
+                    if (s instanceof Gateway) {
+                        // We add a task in between them to simplify analysis.
+                        let t = new VirtualTask('n' + elementId++);
+                        t.setUI(e.getUI);
+                        process.addNode(t);
+                        e.setTarget(t);
+                        process.addEdge(new Edge('n' + elementId++, t, s));
+                    }
+                });
+            });
+        };
     }
 
     return new NormalizerFactory();
-};
+})();
