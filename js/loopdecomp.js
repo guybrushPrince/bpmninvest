@@ -15,11 +15,11 @@ let LoopDecomposition = (function () {
                         a = union(a, decomposeProcess(p));
                         return a;
                     }, {}));
-                    Object.values(acyclicProcesses).forEach(p => console.log(p.asDot()));
+                    //Object.values(acyclicProcesses).forEach(p => console.log(p.asDot()));
                 }
             });
             return acyclicProcesses;
-        }
+        };
 
         let decomposeProcess = function (process) {
             let loops = process.getLoops;

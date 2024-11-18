@@ -92,7 +92,7 @@ class Process extends UIModel {
         if (this.#ends === null) {
             this.#ends = Object.values(this.#nodes).filter((n) => (n instanceof End));
         }
-        return this.#starts;
+        return this.#ends;
     }
     get getLoops() {
         if (this.#loops === null) this.#loops = SCC().analyze(this);
