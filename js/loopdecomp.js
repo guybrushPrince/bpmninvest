@@ -1,3 +1,18 @@
+/**
+ * Performs a loop decomposition of given process models and returns a set of acyclic process models where
+ * acyclic process models resulting of loops are of type LoopProcess.
+ *
+ * The algorithms are based on:
+ * Prinz, T. M., Choi, Y. & Ha, N. L. (2024).
+ * Soundness unknotted: An efficient soundness checking algorithm for arbitrary cyclic process models by loosening loops.
+ * DOI: https://doi.org/10.1016/j.is.2024.102476
+ *
+ * where the basic approach is described here:
+ *
+ * Thomas M. Prinz, Yongsun Choi, N. Long Ha (2024):
+ * Understanding and Decomposing Control-Flow Loops in Business Process Models. BPM 2022: 307-323
+ * DOI: https://doi.org/10.1007/978-3-031-16103-2_21
+ */
 let LoopDecomposition = (function () {
 
     let elementId = 0;
@@ -7,6 +22,11 @@ let LoopDecomposition = (function () {
         let uniqueLoops = {};
         let acyclicProcesses = {};
 
+        /**
+         * Decompose a BPMN model.
+         * @param bpmn
+         * @returns {{}}
+         */
         this.decompose = function (bpmn) {
             if (!Array.isArray(bpmn)) bpmn = [ bpmn ];
             bpmn.forEach((bpmn) => {
@@ -15,15 +35,21 @@ let LoopDecomposition = (function () {
                         a = union(a, decomposeProcess(p));
                         return a;
                     }, {}));
-                    //Object.values(acyclicProcesses).forEach(p => console.log(p.asDot()));
+                    //asList(acyclicProcesses).forEach(p => console.log(p.asDot()));
                 }
             });
             return acyclicProcesses;
         };
 
+        /**
+         * Decompose (sometimes recursively) a process model.
+         * @param process The process model.
+         * @returns {{}}
+         */
         let decomposeProcess = function (process) {
             let loops = process.getLoops;
             if (loops.length === 0) {
+                // The process model is already acyclic and needs no decomposition.
                 let self = {};
                 self[process.getId] = process;
                 return self;
@@ -32,19 +58,24 @@ let LoopDecomposition = (function () {
             // Else ...
             let fragments = decomposeLoops(process);
             let allFragments = {};
-            for (let fragment of Object.values(fragments)) {
+            for (let fragment of asList(fragments)) {
                 allFragments = union(allFragments, decomposeProcess(fragment));
             }
 
             return allFragments;
         }
 
+        /**
+         * Decompose the loops of the process model.
+         * @param process The process model.
+         * @returns {{}}
+         */
         let decomposeLoops = function (process) {
             let processes = { };
             processes[process.getId] = process;
 
             process.getLoops.forEach(function (loop) {
-                let identifierExit = Object.values(loop.getExits)[0];
+                let identifierExit = asList(loop.getExits)[0];
                 // Create a new process for the loop if it is not already there.
                 let loopProcess = null;
                 let newProcess = false;
@@ -54,7 +85,7 @@ let LoopDecomposition = (function () {
                     uniqueLoops[identifierExit.getId] = loopProcess;
 
                     // Copy all nodes of the loop
-                    for (let node of Object.values(loop.getNodes)) {
+                    for (let node of asList(loop.getNodes)) {
                         let copy = node.copy;
                         loop.getNodes[node.getId] = copy;
                         if (node.getId in loop.getEntries) loop.getEntries[node.getId] = copy;
@@ -83,11 +114,11 @@ let LoopDecomposition = (function () {
                 process.addNode(loopNode);
                 // Insert the converging gateway
                 let xorCon = new Gateway('ln' + elementId++, null, GatewayType.XOR);
-                xorCon.setUI(Object.values(processRealEntries).map(p => p.getUI));
+                xorCon.setUI(asList(processRealEntries).map(p => p.getUI));
                 process.addNode(xorCon);
                 // Insert the diverging gateway
                 let xorDiv = new Gateway('ln' + elementId++, null, GatewayType.XOR);
-                xorDiv.setUI(Object.values(processExits).map(p => p.getUI));
+                xorDiv.setUI(asList(processExits).map(p => p.getUI));
                 process.addNode(xorDiv);
                 // Add edges
                 let inL = new Edge('ln' + elementId++, xorCon, loopNode);
@@ -100,44 +131,44 @@ let LoopDecomposition = (function () {
                 loopNode.addPostset(xorDiv); xorDiv.addPreset(loopNode);
 
                 // Insert edges from the entries (exits being in the do-body) to the converging XOR.
-                Object.values(processRealEntries).forEach(entry => {
+                asList(processRealEntries).forEach(entry => {
                     xorCon.setPreset(union(xorCon.getPreset, intersect(entry.getPreset, loop.getDoBody)));
                 })
                 // Insert edges from the diverging XOR to all nodes outside the loop and in the postset of exits.
-                Object.values(processExits).forEach(exit => {
+                asList(processExits).forEach(exit => {
                     xorDiv.setPostset(union(xorDiv.getPostset, diff(exit.getPostset, loop.getNodes)));
                 });
                 // We have to update the predecessors and successors, respectively, of the loop entries and exits.
-                Object.values(xorCon.getPreset).forEach(pred => {
+                asList(xorCon.getPreset).forEach(pred => {
                     pred.setPostset(diff(pred.getPostset, realEntries));
                     pred.addPostset(xorCon);
                     let edge = new Edge('ln' + elementId++, pred, xorCon);
                     process.addEdge(edge);
-                    Object.values(pred.getOutgoing).forEach(o => {
+                    asList(pred.getOutgoing).forEach(o => {
                         if (o.getTarget.getId in realEntries) {
                             edge.setUI(o.getUI);
                         }
                     });
                 });
 
-                Object.values(xorDiv.getPostset).forEach(succ => {
+                asList(xorDiv.getPostset).forEach(succ => {
                     succ.setPreset(diff(succ.getPreset, loop.getExits));
                     succ.addPreset(xorDiv);
                     let edge = new Edge('ln' + elementId++, xorDiv, succ);
                     process.addEdge(edge);
-                    Object.values(succ.getIncoming).forEach(i => {
+                    asList(succ.getIncoming).forEach(i => {
                         if (i.getSource.getId in loop.getExits) {
                             edge.setUI(i.getUI);
                         }
                     });
                 });
-                if (Object.values(xorCon.getPreset).length === 1) {
+                if (asList(xorCon.getPreset).length === 1) {
                     let xorConT = new VirtualTask(xorCon.getId);
                     xorConT.setUI(xorCon.getUI);
                     process.replaceNode(xorCon, xorConT);
                     xorCon = xorConT;
                 }
-                if (Object.values(xorDiv.getPostset).length === 1) {
+                if (asList(xorDiv.getPostset).length === 1) {
                     let xorDivT = new VirtualTask(xorDiv.getId);
                     xorDivT.setUI(xorDiv.getUI);
                     process.replaceNode(xorDiv, xorDivT);
@@ -145,7 +176,7 @@ let LoopDecomposition = (function () {
                 }
 
                 // There are too much flows in the process and not enough in the loop process
-                Object.values(process.getEdges).forEach((flow) => {
+                asList(process.getEdges).forEach((flow) => {
                     let source = flow.getSource, target = flow.getTarget;
 
                     // There are variants:
@@ -230,12 +261,15 @@ let LoopDecomposition = (function () {
                     }
                 });
 
+                // If a new process was created, normalize it.
                 if (newProcess) {
                     Normalizer.normalizeProcess(loopProcess, false);
                 }
 
             });
+            // The process model does not contain these loops now. However, there could be still nested loops.
             process.setLoops(null);
+            // Normalize the process model for the next round.
             Normalizer.normalizeProcess(process, false);
 
             return processes;

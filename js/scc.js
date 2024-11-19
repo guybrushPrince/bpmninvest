@@ -1,3 +1,10 @@
+/**
+ * Finds strongly connected components (aka loops) in a given model.
+ * As methodology, the algorithm of Tarjan is used:
+ *
+ * R. E. Tarjan, Depth-first search and linear graph algorithms, SIAM J. Comput. 1 (2) (1972) 146–160.
+ * doi:10.1137/0201010.
+ */
 let SCC = function () {
 
     let loopId = 0;
@@ -10,6 +17,11 @@ let SCC = function () {
         let successors = {};
         let components = [];
 
+        /**
+         * Finds the SCCs in a BPMN model.
+         * @param bpmn The BPMN model.
+         * @returns {*[]}
+         */
         this.findSCCs = function (bpmn) {
             if (!Array.isArray(bpmn)) bpmn = [bpmn];
             bpmn.forEach((bpmn) => {
@@ -21,20 +33,26 @@ let SCC = function () {
             });
             return bpmn;
         };
+
+        /**
+         * FInds the SCC in a single process model.
+         * @param process The process model as instance of Process.
+         * @returns {*[]}
+         */
         this.analyze = function (process) {
             // Initialize
-            Object.values(process.getNodes).forEach((n) => {
+            asList(process.getNodes).forEach((n) => {
                 index[n.getId] = -1;
                 lowlink[n.getId] = -1;
                 successors[n.getId] = [];
             });
 
             // Determine the direct successors of each node
-            Object.values(process.getEdges).forEach((e) => {
+            asList(process.getEdges).forEach((e) => {
                 successors[e.getSource.getId].push(e.getTarget);
             });
             // Analyze
-            Object.values(process.getNodes).forEach((n) => {
+            asList(process.getNodes).forEach((n) => {
                 if (index[n.getId] === -1) strongConnected(n, process);
             });
 
@@ -69,11 +87,13 @@ let SCC = function () {
                     postset = union(postset, current.getPostset);
                 } while (current.getId !== node.getId);
 
-                if (Object.values(component.getNodes).length > 1) {
+                // The SCC is only of interest if it contains at least 2 nodes.
+                if (asList(component.getNodes).length > 1) {
+                    // Determine entries and exits of the loop.
                     preset = diff(preset, component.getNodes);
                     postset = diff(postset, component.getNodes);
-                    Object.values(preset).forEach(i => component.addEntries(intersect(i.getPostset, component.getNodes)));
-                    Object.values(postset).forEach(o => component.addExits(intersect(o.getPreset, component.getNodes)));
+                    asList(preset).forEach(i => component.addEntries(intersect(i.getPostset, component.getNodes)));
+                    asList(postset).forEach(o => component.addExits(intersect(o.getPreset, component.getNodes)));
                     component.getDoBody;
                     // By
                     //
@@ -82,7 +102,7 @@ let SCC = function () {
                     // DOI: https://doi.org/10.1016/j.is.2024.102476
                     //
                     // loop entries must be "XOR" (or "OR") and loop exits must be "XOR"
-                    Object.values(component.getExits).forEach(exit => {
+                    asList(component.getExits).forEach(exit => {
                         if (exit instanceof Gateway && exit.getKind !== GatewayType.XOR) {
                             faultBus.addError(
                                 process,
@@ -91,7 +111,7 @@ let SCC = function () {
                             );
                         }
                     });
-                    Object.values(component.getEntries).forEach(entry => {
+                    asList(component.getEntries).forEach(entry => {
                         if (entry instanceof Gateway && entry.getKind === GatewayType.AND) {
                             faultBus.addError(
                                 process,

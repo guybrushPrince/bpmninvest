@@ -1,6 +1,11 @@
 /**
- * This function gets a BPMN model as input and normalizes the graphs, i.e., it:
- * 1. Inserts
+ * The normalizer creates a more easy to handle process model out of valid BPMN model. This includes:
+ * 1. Normalize starts when there are multiple ones.
+ * 2. Normalize ends when there are multiple ones.
+ * 3. Normalize starts and ends if they got incoming or outgoing flows, respectively, during normalization.
+ * 4. Normalize gateways when they have multiple incoming and multiple outgoing flows.
+ * 5. Normalize tasks when they have multiple incoming or multiple outgoing flows.
+ * 6. Add tasks between directly connected gateways.
  */
 let Normalizer = (function () {
 
@@ -40,7 +45,7 @@ let Normalizer = (function () {
         let normalizeStarts = function (process) {
             // Detect implicit start nodes
             let starts =
-                Object.values(process.getNodes).filter((n) => Object.values(n.getIncoming).length === 0);
+                asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
 
             if (starts.length === 0 && that.withFaults) {
                 faultBus.addError(process, [], FaultType.NO_START);
@@ -90,7 +95,7 @@ let Normalizer = (function () {
                     and = implicitStarts[0];
                 }
             }
-            if (!(and instanceof Start) || Object.values(and.getOutgoing).length >= 2) {
+            if (!(and instanceof Start) || asList(and.getOutgoing).length >= 2) {
                 let start = new Start('n' + elementId++, 'StartEvent');
                 start.setUI(and.getUI);
                 process.addNode(start);
@@ -99,7 +104,7 @@ let Normalizer = (function () {
 
             // Replace each explicit start with multiple outgoing flows with an AND gateway.
             explicitStarts.forEach(function (start) {
-                if (Object.values(start.getOutgoing).length >= 2) {
+                if (asList(start.getOutgoing).length >= 2) {
                     let nStart = new Gateway(start.getId, null, GatewayType.AND);
                     nStart.setUI(start.getUI);
                     process.replaceNode(start, nStart, false);
@@ -110,7 +115,7 @@ let Normalizer = (function () {
         let normalizeEnds = function (process) {
             // Detect implicit end nodes
             let ends =
-                Object.values(process.getNodes).filter((n) => Object.values(n.getOutgoing).length === 0);
+                asList(process.getNodes).filter((n) => asList(n.getOutgoing).length === 0);
 
             if (ends.length === 0 && that.withFaults) {
                 faultBus.addError(process, [], FaultType.NO_END);
@@ -132,7 +137,7 @@ let Normalizer = (function () {
                 or.setUI(ends.map((e) => e.getUI));
                 process.addNode(or);
                 ends.forEach(function (end) {
-                    if (end instanceof End && Object.values(end.getIncoming).length >= 2) {
+                    if (end instanceof End && asList(end.getIncoming).length >= 2) {
                         // If an end event has multiple incoming flows, make the joining behavior explicit.
                         let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                         nEnd.setUI(end.getUI);
@@ -146,7 +151,7 @@ let Normalizer = (function () {
             if (or === null) {
                 let end = ends[0];
                 // If the single end event has multiple incoming flows, make its joining behavior explicit.
-                if (end instanceof End && Object.values(end.getIncoming).length >= 2) {
+                if (end instanceof End && asList(end.getIncoming).length >= 2) {
                     let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                     nEnd.setUI(end.getUI);
                     process.replaceNode(end, nEnd, false);
@@ -162,10 +167,10 @@ let Normalizer = (function () {
         };
 
         let normalizeStartAndEnds = function (process) {
-            let startEnds = Object.values(process.getNodes).filter((n) => (n instanceof Start || n instanceof End));
+            let startEnds = asList(process.getNodes).filter((n) => (n instanceof Start || n instanceof End));
             startEnds.forEach(function (s) {
-                if ((s instanceof Start && Object.values(s.getIncoming).length >= 1) ||
-                    (s instanceof End && Object.values(s.getOutgoing).length >= 1)) {
+                if ((s instanceof Start && asList(s.getIncoming).length >= 1) ||
+                    (s instanceof End && asList(s.getOutgoing).length >= 1)) {
                     let nS = new Task(s.getId, s.className);
                     nS.setUI(s.getUI);
                     process.replaceNode(s, nS, false);
@@ -176,18 +181,18 @@ let Normalizer = (function () {
         }
 
         let normalizeGateways = function (process) {
-            let gateways = Object.values(process.getNodes).filter((n) => (n instanceof Gateway));
+            let gateways = asList(process.getNodes).filter((n) => (n instanceof Gateway));
             gateways.forEach(function (g) {
-                if (Object.values(g.getOutgoing).length >= 2 && Object.values(g.getIncoming).length >= 2) {
+                if (asList(g.getOutgoing).length >= 2 && asList(g.getIncoming).length >= 2) {
                     // Split the gateway into two.
                     let n = new Gateway('n' + elementId++, null, g.getKind);
                     n.setUI(g.getUI);
                     process.addNode(n);
-                    Object.values(g.getOutgoing).forEach(function (e) {
+                    asList(g.getOutgoing).forEach(function (e) {
                         e.setSource(n);
                     });
                     process.addEdge(new Edge('n' + elementId++, g, n));
-                }/* else if (Object.values(g.getOutgoing).length === 1 && Object.values(g.getIncoming).length === 1) {
+                }/* else if (asList(g.getOutgoing).length === 1 && asList(g.getIncoming).length === 1) {
                     // Replace it with a task
                     if (that.withFaults) faultBus.addWarning(process, g, FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS);
                     let t = new Task(g.getId, g.getType);
@@ -198,17 +203,17 @@ let Normalizer = (function () {
         };
 
         let normalizeTasks = function (process) {
-            let tasks = Object.values(process.getNodes).filter((n) => (n instanceof Task));
+            let tasks = asList(process.getNodes).filter((n) => (n instanceof Task));
             tasks.forEach(function (t) {
                 // Following p. 151 of the BPMN spec, an activity with multiple incoming flows
                 // will always be instantiated when a token is on an incoming flow. I.e., if there
                 // are two incoming flows with a token of each of them, the activity is executed twice.
                 // We model that with an XOR gateway.
-                if (Object.values(t.getIncoming).length >= 2) {
+                if (asList(t.getIncoming).length >= 2) {
                     let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
                     g.setUI(t.getUI);
                     process.addNode(g);
-                    Object.values(t.getIncoming).forEach(function (e) {
+                    asList(t.getIncoming).forEach(function (e) {
                         e.setTarget(g);
                     });
                     process.addEdge(new Edge('n' + elementId++, g, t));
@@ -216,12 +221,12 @@ let Normalizer = (function () {
                 // Following p. 151 of the BPMN spec, an activity with multiple outgoing flows
                 // will place a token on all its outgoing flows. We model this explicitly with an
                 // AND gateway.
-                if (Object.values(t.getOutgoing).length >= 2) {
+                if (asList(t.getOutgoing).length >= 2) {
                     // Split the gateway into two.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);
                     g.setUI(t.getUI);
                     process.addNode(g);
-                    Object.values(t.getOutgoing).forEach(function (e) {
+                    asList(t.getOutgoing).forEach(function (e) {
                         e.setSource(g);
                     });
                     process.addEdge(new Edge('n' + elementId++, t, g));
@@ -230,9 +235,9 @@ let Normalizer = (function () {
         };
 
         let normalizeFlows = function (process) {
-            let gateways = Object.values(process.getNodes).filter(n => n instanceof Gateway);
+            let gateways = asList(process.getNodes).filter(n => n instanceof Gateway);
             gateways.forEach(function (g) {
-                Object.values(g.getOutgoing).forEach(e => {
+                asList(g.getOutgoing).forEach(e => {
                     let s = e.getTarget;
                     if (s instanceof Gateway) {
                         // We add a task in between them to simplify analysis.

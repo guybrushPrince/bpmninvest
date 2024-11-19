@@ -40,7 +40,7 @@ class BPMNModel extends UIModel {
 
     asDot() {
         let c = 'digraph G {';
-        c += Object.values(this.#processes).map((p) => p.asDot()).join("\n");
+        c += asList(this.#processes).map((p) => p.asDot()).join("\n");
         c += '}';
         return c;
     }
@@ -75,7 +75,7 @@ class Process extends UIModel {
 
     replaceNode(node, nNode, reset = true) {
         this.#nodes[node.getId] = nNode;
-        Object.values(this.#edges).forEach(function(edge) {
+        asList(this.#edges).forEach(function(edge) {
             if (edge.getSource.getId === node.getId) edge.setSource(nNode);
             if (edge.getTarget.getId === node.getId) edge.setTarget(nNode);
         });
@@ -84,13 +84,13 @@ class Process extends UIModel {
 
     get getStarts() {
         if (this.#starts === null) {
-            this.#starts = Object.values(this.#nodes).filter((n) => (n instanceof Start));
+            this.#starts = asList(this.#nodes).filter((n) => (n instanceof Start));
         }
         return this.#starts;
     }
     get getEnds() {
         if (this.#ends === null) {
-            this.#ends = Object.values(this.#nodes).filter((n) => (n instanceof End));
+            this.#ends = asList(this.#nodes).filter((n) => (n instanceof End));
         }
         return this.#ends;
     }
@@ -105,7 +105,7 @@ class Process extends UIModel {
 
 
     resetInOut() {
-        Object.values(this.#nodes).forEach(function (node) {
+        asList(this.#nodes).forEach(function (node) {
             node.setIncoming({});
             node.setOutgoing({});
             node.setPreset({});
@@ -115,7 +115,7 @@ class Process extends UIModel {
 
     computeInOut() {
         this.resetInOut();
-        Object.values(this.#edges).forEach(function (edge) {
+        asList(this.#edges).forEach(function (edge) {
             edge.getSource.addOutgoing(edge);
             edge.getTarget.addIncoming(edge);
             edge.getSource.addPostset(edge.getTarget);
@@ -125,8 +125,8 @@ class Process extends UIModel {
 
     asDot() {
         let c = 'subgraph cluster_' + this.getId.replaceAll('-', '_') + ' {';
-        c += Object.values(this.#nodes).map((n) => n.asDot()).join("\n");
-        c += Object.values(this.#edges).map((e) => e.asDot()).join("\n");
+        c += asList(this.#nodes).map((n) => n.asDot()).join("\n");
+        c += asList(this.#edges).map((e) => e.asDot()).join("\n");
         c += '}';
         return c;
     }
@@ -344,11 +344,11 @@ class Loop extends UIModel {
         let workingList = Object.assign({}, this.#entries);
         let doBody = Object.assign({}, workingList);
         let cut = {};
-        Object.values(this.#exits).forEach(function(e) {
+        asList(this.#exits).forEach(function(e) {
             cut = union(cut, e.getPostset);
         });
         let it = 0;
-        while (Object.values(workingList).length !== 0) {
+        while (asList(workingList).length !== 0) {
             let curId = Object.keys(workingList)[0];
             let cur = workingList[curId];
             delete workingList[curId];
@@ -367,10 +367,10 @@ class Loop extends UIModel {
         // DOI: https://doi.org/10.1016/j.is.2024.102476
         //
         // a so-called "back join" cannot be an AND
-        Object.values(doBody).forEach(node => {
+        asList(doBody).forEach(node => {
             if (node instanceof Gateway) {
                 if (!(node.getId in this.getEntries)) {
-                    let isBackJoin = Object.values(node.getPreset).filter(p => !(p.getId in doBody)).length >= 1;
+                    let isBackJoin = asList(node.getPreset).filter(p => !(p.getId in doBody)).length >= 1;
                     if (isBackJoin && node.getKind === GatewayType.AND) {
                         faultBus.addError(
                             this.#process,
