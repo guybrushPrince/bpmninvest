@@ -9,6 +9,7 @@ let SoundnessVerifier = (function () {
             if (!Array.isArray(acyclicProcesses)) acyclicProcesses = [ acyclicProcesses ];
             acyclicProcesses.forEach((process) => {
                 checkDeadlocks(process);
+                checkLacksOfSynchronization(process);
             });
         };
 
@@ -143,6 +144,179 @@ let SoundnessVerifier = (function () {
             }
             return L;
         }
+
+
+
+        /*
+         * Lack of synchronization
+         */
+
+        let checkLacksOfSynchronization = function (process) {
+            let phiFunctions = setPhiFunctions(process);
+            for (let j in phiFunctions) {
+                let sync = process.getNodes[j];
+                if (!(sync instanceof Gateway) || sync.getKind !== GatewayType.XOR ||
+                    Object.values(sync.getPreset).length <= 1) continue;
+                let syncPhis = phiFunctions[j];
+                for (let s in syncPhis) {
+                    if (Object.values(syncPhis[s]).length >= 2) {
+                        let split = process.getNodes[s];
+
+                        let syncPhisFine = {};
+                        for (let p in syncPhis[s]) {
+                            let n = syncPhis[s][p];
+                            while (!(n.getId in split.getPostset)) {
+                                n = phiFunctions[n.getId][split.getId];
+                                n = Object.values(n)[0];
+                            }
+                            syncPhisFine[n.getId] = n;
+                        }
+
+                        faultBus.addError(process, {
+                            split: split,
+                            postset: syncPhisFine,
+                            intersectionPoint: sync
+                        }, FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION);
+                    }
+                }
+            }
+        };
+
+        let setPhiFunctions = function(process) {
+            let phiFunctions = {};
+            let dominanceFrontierSet = dominanceFrontier(process, dominance(process));
+
+            let psplits = Object.values(process.getNodes).filter(n =>
+                ((n instanceof Gateway && (n.getKind === GatewayType.AND || n.getKind === GatewayType.OR) &&
+                    Object.values(n.getPostset).length >= 2)));
+
+            psplits.forEach(s => {
+                // Get the successors of s where the virtual variables are defined
+                let defineEdges = Object.values(s.getPostset);
+                while (defineEdges.length > 0) {
+                    let n = defineEdges.shift();
+
+                    Object.values(dominanceFrontierSet[n.getId]).forEach(sync => {
+                        if (!(sync.getId in phiFunctions)) phiFunctions[sync.getId] = {};
+                        let syncPhiFunctions = phiFunctions[sync.getId];
+                        if (!(s.getId in syncPhiFunctions)) syncPhiFunctions[s.getId] = {};
+                        syncPhiFunctions[s.getId][n.getId] = n;
+                        defineEdges.push(sync);
+                    });
+                }
+            });
+            return phiFunctions;
+        };
+
+        /**
+         * Perform the dominance analysis.
+         */
+        let dominance = function (process) {
+            // Some help sets
+            let defined = {};
+            let IN = {};
+            let dominatedOf = Object.values(process.getNodes).reduce((d,n) => {
+                d[n.getId] = [];
+                return d;
+            }, {});
+
+            // Get start nodes
+            let starts = process.getStarts;
+            starts.forEach(s => {
+                dominatedOf[s.getId].push(s.getId)
+                defined[s.getId] = s;
+            });
+
+            let orderInfo = reversePostorder(process);
+            let order = orderInfo.order, postOrderNumbers = orderInfo.numbers;
+
+            let stable;
+            do {
+                stable = true;
+                order.forEach(node => {
+                    if (node instanceof Start) return;
+                    IN = {};
+                    IN = union(IN, node.getPreset);
+                    IN = intersect(IN, defined);
+                    let pre = Object.values(IN);
+
+                    if (pre.length > 0) {
+                        let j = pre.pop();
+                        let idom = j;
+                        for (j of pre) {
+                            idom = intersectDom(j, idom, dominatedOf, postOrderNumbers);
+                        }
+                        if (!(node.getId in defined)) {
+                            defined[node.getId] = node;
+                            dominatedOf[node.getId].push(idom);
+                            stable = false;
+                        } else {
+                            let idomOld = dominatedOf[node.getId].at(-1);
+                            if (postOrderNumbers[idomOld.getId] !== postOrderNumbers[idom.getId]) {
+                                dominatedOf[node.getId].push(idom);
+                                stable = false;
+                            }
+                        }
+                    }
+                });
+            } while (!stable);
+            return dominatedOf;
+        };
+
+        let intersectDom = function (finger1, finger2, dominatedOf, postOrderNumbers) {
+            while (postOrderNumbers[finger1.getId] !== postOrderNumbers[finger2.getId]) {
+                while (postOrderNumbers[finger1.getId] < postOrderNumbers[finger2.getId]) {
+                    finger1 = dominatedOf[finger1.getId].at(-1);
+                }
+                while (postOrderNumbers[finger2.getId] < postOrderNumbers[finger1.getId]) {
+                    finger2 = dominatedOf[finger2.getId].at(-1);
+                }
+            }
+            return finger1;
+        }
+
+        let dominanceFrontier = function (process, dominatedOf) {
+            let dominanceFrontier = Object.values(process.getNodes).reduce((dF,n) => {
+                dF[n.getId] = {};
+                return dF;
+            }, {});
+            Object.values(process.getNodes).forEach(n => {
+                let IN = Object.values(n.getPreset);
+                if (IN.length >= 2) {
+                    for (let runner of IN) {
+                        while (runner.getId !== dominatedOf[n.getId].at(-1).getId) {
+                            dominanceFrontier[runner.getId][n.getId] = n;
+                            runner = dominatedOf[runner.getId].at(-1);
+                        }
+                    }
+                }
+            });
+            return dominanceFrontier;
+        }
+
+        let reversePostorder = function (process) {
+            let visited = {};
+            let reversePostOrder = [];
+            let postOrderNumbers = {};
+
+            process.getStarts.forEach(s => {
+                Object.values(s.getPostset).forEach(s => {
+                    depthFirstSearch(s, visited, reversePostOrder, postOrderNumbers);
+                })
+            });
+            return { order: reversePostOrder, numbers: postOrderNumbers };
+        }
+
+        let depthFirstSearch = function (n, visited, reversePostOrder, postOrderNumbers) {
+            visited[n.getId] = n;
+            let out = diff(n.getPostset, visited);
+            Object.values(out).forEach(i => {
+                depthFirstSearch(i, visited, reversePostOrder, postOrderNumbers);
+            });
+            postOrderNumbers[n.getId] = reversePostOrder.length;
+            reversePostOrder.unshift(n);
+        }
+
     }
 
     return function() {

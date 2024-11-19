@@ -67,6 +67,7 @@ let Normalizer = (function () {
                     process.addNode(xor);
                     explicitStarts.forEach(function (start) {
                         let sf = new Edge('n' + elementId++, xor, start);
+                        sf.setUI(start.getUI);
                         process.addEdge(sf);
                     });
                 }
