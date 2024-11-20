@@ -253,16 +253,24 @@ let SoundnessVerifier = (function () {
             }
         };
 
+        /**
+         * Sets (virtually) phi functions on converging nodes. This is based on dominance frontiers.
+         * A dominance frontier is a node, where the dominance of another node ends. Dominance is an important concept
+         * from compiler theory.
+         * @param process The process model of type Process.
+         * @returns {{}}
+         */
         let setPhiFunctions = function(process) {
             let phiFunctions = {};
             let dominanceFrontierSet = dominanceFrontier(process, dominance(process));
 
+            // Get AND and OR splits.
             let psplits = asList(process.getNodes).filter(n =>
                 ((n instanceof Gateway && (n.getKind === GatewayType.AND || n.getKind === GatewayType.OR) &&
                     asList(n.getPostset).length >= 2)));
 
             psplits.forEach(s => {
-                // Get the successors of s where the virtual variables are defined
+                // Get the successors of s where the virtual variables are defined, for which we search the phi places.
                 let defineEdges = asList(s.getPostset);
                 while (defineEdges.length > 0) {
                     let n = defineEdges.shift();
@@ -280,7 +288,15 @@ let SoundnessVerifier = (function () {
         };
 
         /**
-         * Perform the dominance analysis.
+         * To find the dominance frontiers, the dominance relation must be computed. One node dominates another node if
+         * it is on all paths from the start to this node. The here used algorithm is based on:
+         *
+         * Cooper, Keith D. and Harvey, Timothy J. and Kennedy, Ken:
+         * A Simple, Fast Dominance Algorithm
+         * Rice Computer Science TR-06-33870
+         *
+         * @param process The process model of type Process.
+         * @returns {*}
          */
         let dominance = function (process) {
             // Some help sets
@@ -301,6 +317,7 @@ let SoundnessVerifier = (function () {
             let orderInfo = reversePostorder(process);
             let order = orderInfo.order, postOrderNumbers = orderInfo.numbers;
 
+            // This is a fixed point analysis, i.e., the algorithm terminates when no information changes.
             let stable;
             do {
                 stable = true;
@@ -334,6 +351,14 @@ let SoundnessVerifier = (function () {
             return dominatedOf;
         };
 
+        /**
+         * Helper function of the dominance algorithm of Cooper et al.
+         * @param finger1 A node.
+         * @param finger2 A second node.
+         * @param dominatedOf The dominance relation.
+         * @param postOrderNumbers The post order numbers.
+         * @returns {*}
+         */
         let intersectDom = function (finger1, finger2, dominatedOf, postOrderNumbers) {
             while (postOrderNumbers[finger1.getId] !== postOrderNumbers[finger2.getId]) {
                 while (postOrderNumbers[finger1.getId] < postOrderNumbers[finger2.getId]) {
@@ -346,7 +371,14 @@ let SoundnessVerifier = (function () {
             return finger1;
         }
 
+        /**
+         * Derive the dominance frontiers out of the dominance relation.
+         * @param process The process model as instance of Process.
+         * @param dominatedOf The dominance relation as Object.
+         * @returns {*}
+         */
         let dominanceFrontier = function (process, dominatedOf) {
+            // Initialize with empty sets for each node.
             let dominanceFrontier = asList(process.getNodes).reduce((dF,n) => {
                 dF[n.getId] = {};
                 return dF;
@@ -354,7 +386,9 @@ let SoundnessVerifier = (function () {
             asList(process.getNodes).forEach(n => {
                 let IN = asList(n.getPreset);
                 if (IN.length >= 2) {
+                    // Investigate the predecessors of each node.
                     for (let runner of IN) {
+                        // Go back in the immediate dominance tree from runner as long it dominates NOT n.
                         while (runner.getId !== dominatedOf[n.getId].at(-1).getId) {
                             dominanceFrontier[runner.getId][n.getId] = n;
                             runner = dominatedOf[runner.getId].at(-1);
@@ -365,6 +399,11 @@ let SoundnessVerifier = (function () {
             return dominanceFrontier;
         }
 
+        /**
+         * Compute a reverse postorder, which is needed by the algorithm of Cooper et al. for dominance computation.
+         * @param process The process model as instance of Process.
+         * @returns {{numbers: {}, order: *[]}}
+         */
         let reversePostorder = function (process) {
             let visited = {};
             let reversePostOrder = [];
