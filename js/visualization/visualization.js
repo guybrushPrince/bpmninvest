@@ -2,35 +2,20 @@ let startSubscription = function(){
     faultBus.subscribe(processFault);
 }
 
-let processFault = async function(type, process, elements, fault){
-    console.log("processFault function is logging: ", type, process, elements, fault);
-
-    // import diagram
-    try {
-
-        await bpmnModeler.importXML(bpmnXML);
-
-        // access modeler components
-        var canvas = bpmnModeler.get('canvas');
-        var overlays = bpmnModeler.get('overlays');
+let processFault = function(type, process, elements, fault){
+    console.log("processFault function is logging: ", process);
+    console.log(process.getId);
 
 
-        // zoom to fit full viewport
-        canvas.zoom('fit-viewport');
+    var overlays = window.bpmnModeler.get('overlays');
 
-        // attach an overlay to a node
-        overlays.add(elements, 'note', {
-            position: {
-                bottom: 0,
-                right: 0
-            },
-            html: '<div class="diagram-note">Mixed up the labels?</div>'
-        });
+    // Get the necessary configs depending on the fault
+    let markerConfigs = getMarker(fault);
 
-        // add marker
-        canvas.addMarker(elements, 'needs-discussion');
-    } catch (err) {
+    // Attach an overlay to a node
+    overlays.add(process.getId, 'note', markerConfigs);
 
-        console.error('could not import BPMN 2.0 diagram', err);
-    }
+    // Add marker
+    let canvas = window.bpmnModeler.get('canvas');
+    canvas.addMarker(process.getId, 'needs-discussion');
 }

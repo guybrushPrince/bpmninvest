@@ -56,7 +56,7 @@
     var diagramUrl = 'example/IS-test.bpmn';//'https://cdn.statically.io/gh/bpmn-io/bpmn-js-examples/dfceecba/starter/diagram.bpmn';
 
     // modeler instance
-    var bpmnModeler = new BpmnJS({
+    window.bpmnModeler = new BpmnJS({
         container: '#canvas',
         keyboard: {
             bindTo: window
@@ -152,4 +152,5 @@
 <script src="js/loopdecomp.js" async></script>
 <script src="js/soundness.js" async></script>
 <script src="js/visualization/visualization.js" async></script>
+<script src="js/visualization/createMarker.js" async></script>
 </html>

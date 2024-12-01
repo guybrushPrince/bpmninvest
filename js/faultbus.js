@@ -17,24 +17,24 @@ let faultBus = (function () {
 
         // Notify observers about fault
         this.addInfo = function (process, elements, fault) {
-            this.notify('info', process, elements, fault);
             console.log("Info:", [process, elements, fault]);
+            this.notify('info', process, elements, fault);
         };
 
         this.addWarning = function (process, elements, fault) {
-            this.notify('warning', process, elements, fault);
             console.log("Warning:", [process, elements, fault]);
+            this.notify('warning', process, elements, fault);
         };
 
         this.addError = function (process, elements, fault) {
-            this.notify('error', process, elements, fault);
             console.log("Error:", [process, elements, fault]);
+            this.notify('error', process, elements, fault);
         };
 
         // Add an observer
         this.subscribe = function (func) {
             this.observers.push(func);
-            console.log("new subscriber: ", func);
+            console.log("new subscriber added");
         };
 
         // Remove an observer
