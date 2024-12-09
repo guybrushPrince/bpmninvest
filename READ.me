@@ -1,0 +1,11 @@
+To use the tool, first run startSubscription(); in the
+browsers console, then run
+SoundnessVerifier().check(
+    LoopDecomposition().decompose(
+        SCC().findSCCs(
+            Normalizer.normalize(
+                analyze()
+            )
+        )
+    )
+);
