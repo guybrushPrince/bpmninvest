@@ -2,20 +2,19 @@ let startSubscription = function(){
     faultBus.subscribe(processFault);
 }
 
-let processFault = function(type, process, elements, fault){
-    console.log("processFault function is logging: ", process);
-    console.log(process.getId);
-
+let processFault = function(messageType, process, elements, faultType){
+    console.log("processFault function is logging: ", elements);
 
     var overlays = window.bpmnModeler.get('overlays');
 
     // Get the necessary configs depending on the fault
-    let markerConfigs = getMarker(fault);
+    let markerConfigs = getMarker(faultType, messageType);
 
     // Attach an overlay to a node
-    overlays.add(process.getId, 'note', markerConfigs);
+    let elementId = getJQueryId(process, elements, faultType);
+    overlays.add(elementId, messageType, markerConfigs);
 
     // Add marker
     let canvas = window.bpmnModeler.get('canvas');
-    canvas.addMarker(process.getId, 'needs-discussion');
+    canvas.addMarker(elementId, messageType);
 }

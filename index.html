@@ -15,36 +15,8 @@
     <!-- needed for this example only -->
     <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.js"></script>
 
-    <!-- example styles -->
-    <style>
-        html, body, #canvas {
-            height: 100%;
-            padding: 0;
-            margin: 0;
-        }
-
-        .diagram-note {
-            background-color: rgba(66, 180, 21, 0.7);
-            color: White;
-            border-radius: 5px;
-            font-family: Arial;
-            font-size: 12px;
-            padding: 5px;
-            min-height: 16px;
-            width: 50px;
-            text-align: center;
-        }
-
-        .needs-discussion:not(.djs-connection) .djs-visual > :nth-child(1) {
-            stroke: rgba(66, 180, 21, 0.7) !important; /* color elements as red */
-        }
-
-        #save-button {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-        }
-    </style>
+    <!-- custom styles -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="canvas"></div>
@@ -53,7 +25,7 @@
 
 <script>
 
-    var diagramUrl = 'example/IS-test.bpmn';//'https://cdn.statically.io/gh/bpmn-io/bpmn-js-examples/dfceecba/starter/diagram.bpmn';
+    var diagramUrl = 'example/kredit.bpmn';//'https://cdn.statically.io/gh/bpmn-io/bpmn-js-examples/dfceecba/starter/diagram.bpmn';
 
     // modeler instance
     window.bpmnModeler = new BpmnJS({
