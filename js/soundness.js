@@ -147,7 +147,7 @@ let SoundnessVerifier = (function () {
          */
         let topologicalSort = function (process) {
             let L = [];
-            let S = process.getStarts.concat([]);
+            let S = [...process.getStarts];
             let presets = {};
             asList(process.getNodes).forEach(n => {
                 presets[n.getId] = union(n.getPreset, {});
@@ -180,7 +180,7 @@ let SoundnessVerifier = (function () {
          */
         let reverseTopologicalSort = function (process) {
             let L = [];
-            let S = process.getEnds;
+            let S = [...process.getEnds];
             let postsets = {};
             asList(process.getNodes).forEach(n => {
                 postsets[n.getId] = union(n.getPostset, {});

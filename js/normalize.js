@@ -155,6 +155,7 @@ let Normalizer = (function () {
                     let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                     nEnd.setUI(end.getUI);
                     process.replaceNode(end, nEnd, false);
+                    or = nEnd;
                 }
             }
 
