@@ -41,7 +41,22 @@ html, body, #canvas {
 
 }
 
-.error{
+.error:not(.djs-connection) .djs-visual > :nth-child(1) {
+    background-color: none;
+    stroke: rgba(245, 5, 5, 0.7) !important; /* color elements as red */
+}
+
+.djs-overlays {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.djs-overlay {
+    position: relative !important;
+}
+
+.djs-overlay > .error {
     background-color: rgb(245, 5, 5, 0.8);
     color: white;
     border-radius: 5px;
@@ -49,15 +64,23 @@ html, body, #canvas {
     font-size: 12px;
     padding: 5px;
     min-height: 16px;
-    width: 50px;
     text-align: center;
-
 }
 
-.error:not(.djs-connection) .djs-visual > :nth-child(1) {
+/* .djs-overlay > .error {
+    position: relative;
+    padding-right: 20px; /* To make space for the icon 
+} */
+
+/* .djs-overlay > .error::after {
+    content: "⚠️"; /* Red exclamation mark emoji 
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    font-size: 18px; /* Adjust size as needed 
     background-color: none;
-    stroke: rgba(245, 5, 5, 0.7) !important; /* color elements as red */
-}
+} */
 
 #save-button {
     position: fixed;

@@ -1,4 +1,5 @@
 function getMarker(faultType, messageType){
+    console.log("marker generated");
 
     let config;
 
@@ -8,7 +9,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">No start node found</div>`
+            html:  `<div class="${messageType}">⚠️ No start node found</div>`//`<div class="${messageType}"/><div>`
         }
     }
 
@@ -18,7 +19,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">No end node found</div>`
+            html:  `<div class="${messageType}">⚠️ No end node found</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -28,7 +29,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">An implicit start node found</div>`
+            html:  `<div class="${messageType}">⚠️ An implicit start node found</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -38,7 +39,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">An implicit end node found</div>`
+            html:  `<div class="${messageType}">⚠️ An implicit end node found</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -48,7 +49,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">Your gateway has only one flow</div>`
+            html:  `<div class="${messageType}">⚠️ Your gateway has only one flow</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -58,7 +59,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">Loop exits need to be conditional splits</div>`
+            html:  `<div class="${messageType}">⚠️ Loop exits need to be conditional splits</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -68,7 +69,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">Cyclic parallel gateway found</div>` //back joins can only be exclusive not cycli
+            html:  `<div class="${messageType}">⚠️ Cyclic parallel gateway found</div>`//`<div class="${messageType}"></div>` //back joins can only be exclusive not cyclic
         }
     }
 
@@ -78,7 +79,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">This should be a cyclic exclusive gateway</div>`
+            html:  `<div class="${messageType}">⚠️ This should be a cyclic exclusive gateway</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -88,7 +89,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">Possible process blockage</div>`
+            html:  `<div class="${messageType}">⚠️ Possible process blockage</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -98,7 +99,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html: `<div class="${messageType}">possible unnecessary executions</div>`
+            html:  `<div class="${messageType}">⚠️ Possible unnecessary executions</div>`//`<div class="${messageType}"></div>`
         }
     }
 
@@ -106,40 +107,50 @@ function getMarker(faultType, messageType){
 }
 
 function getJQueryId(process, element, faultType){
+    console.log("element id retrieved");
 
-    let id;
+    let id, x, y;
+    let domElement;
 
     if (faultType === 'NO_START' || faultType === 'NO_END'){
-        id = process.getId;
+        id = String(process.getId);
     }
 
     else if (faultType === 'IMPLICIT_START' || faultType === 'IMPLICIT_END'){
         if (element[0].getType === "VirtualTask"){
-            id = element[0].getUI.data('element-id');
+            domElement = element[0].getUI;
+            id = String(domElement.data('element-id'));
         }
     }
 
     else if (faultType === 'LOOP_EXIT_NOT_XOR'){
-        id = element.exit.getUI.data('element-id');
+        domElement = element.exit.getUI;
+        id = String(domElement.data('element-id'));
     }
 
     else if (faultType === 'LOOP_ENTRY_IS_AND'){
-        id = element.entry.getUI.data('element-id');
+        domElement = element.entry.getUI;
+        id = String(domElement.data('element-id'));
     }
 
     else if (faultType === 'LOOP_BACK_JOIN_IS_AND'){
-        id = element.backjoin.getUI.data('element-id');
+        domElement = element.backjoin.getUI;
+        id = String(domElement.data('element-id'));
     }
 
     else if (faultType === 'POTENTIAL_DEADLOCK'){
-        id = element.join.getUI.data('element-id');
+        domElement = element.join.getUI;
+        id = String(domElement.data('element-id'));
     }
 
     else if (faultType === 'POTENTIAL_LACK_OF_SYNCHRONIZATION'){
-        // let jQElement = element.intersectionPoint.getUI[0];
-        // id = jQElement.attr('data-element-id');
-        id = element.intersectionPoint.getUI[0].data('element-id');
+        domElement = $(element.intersectionPoint.getUI[0]);
+        id = String(domElement.data('element-id'));
     }
 
-    return {id: id};
+    return id;
 }
+
+//TODO: block of implicit end/start: what if the if clause does not return true?
+//TODO: put event listeners on the error alerts to open the side-panel for error fixing (depending on what info is written there, the
+//      content of the error alerts (the sentences) should still be improved)
