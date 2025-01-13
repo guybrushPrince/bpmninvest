@@ -9,7 +9,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ No start node found</div>`//`<div class="${messageType}"/><div>`
+            html:  `<div class="${messageType}">⚠️ No start node found</div>`   //Fehler wird nicht erkannt
         }
     }
 
@@ -19,7 +19,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ No end node found</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ No end node found</div>` //Fehler wird nicht erkannt
         }
     }
 
@@ -29,7 +29,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ An implicit start node found</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ An implicit start node found</div>`  //x
         }
     }
 
@@ -39,7 +39,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ An implicit end node found</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ An implicit end node found</div>`       //x
         }
     }
 
@@ -49,7 +49,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Your gateway has only one flow</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ Your gateway has only one flow</div>`    //x
         }
     }
 
@@ -59,7 +59,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Loop exits need to be conditional splits</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ Loop exits need to be conditional splits</div>`  //fine
         }
     }
 
@@ -69,7 +69,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Cyclic parallel gateway found</div>`//`<div class="${messageType}"></div>` //back joins can only be exclusive not cyclic
+            html:  `<div class="${messageType}">⚠️ Cyclic parallel gateway found</div>`     //fine
         }
     }
 
@@ -79,7 +79,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ This should be a cyclic exclusive gateway</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ This should be a cyclic exclusive gateway</div>`     //x
         }
     }
 
@@ -89,7 +89,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Possible process blockage</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ Possible process blockage</div>`     //fine
         }
     }
 
@@ -99,7 +99,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Possible unnecessary executions</div>`//`<div class="${messageType}"></div>`
+            html:  `<div class="${messageType}">⚠️ Possible unnecessary executions</div>`       //fine
         }
     }
 
@@ -154,3 +154,5 @@ function getJQueryId(process, element, faultType){
 //TODO: block of implicit end/start: what if the if clause does not return true?
 //TODO: put event listeners on the error alerts to open the side-panel for error fixing (depending on what info is written there, the
 //      content of the error alerts (the sentences) should still be improved)
+//TODO: error markers shouldn't be placed jon top of each other
+//TODO: the same error tag should not be placed multiple times on the same element

@@ -44,8 +44,10 @@ let Normalizer = (function () {
 
         let normalizeStarts = function (process) {
             // Detect implicit start nodes
-            let starts =
-                asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
+            console.log("checking for implicit starts");
+            console.log("getting nodes: ", process.getNodes);
+            let starts = asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
+            console.log("the starts found: ", starts);
 
             if (starts.length === 0 && that.withFaults) {
                 faultBus.addError(process, [], FaultType.NO_START);
@@ -118,6 +120,7 @@ let Normalizer = (function () {
                 asList(process.getNodes).filter((n) => asList(n.getOutgoing).length === 0);
 
             if (ends.length === 0 && that.withFaults) {
+                console.log("No end found");
                 faultBus.addError(process, [], FaultType.NO_END);
                 return;
             }
