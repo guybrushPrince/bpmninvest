@@ -11,29 +11,26 @@ let Normalizer = (function () {
 
     function NormalizerFactory() {
         let elementId = 1;
-        this.withFaults = true;
         let that = this;
 
         this.normalize = function (bpmn, withFaults = true) {
-            that.withFaults = withFaults;
             if (!Array.isArray(bpmn)) bpmn = [bpmn];
             bpmn.forEach((bpmn) => {
                 if (bpmn instanceof BPMNModel) {
-                    bpmn.getProcesses.forEach(this.normalizeProcess);
+                    bpmn.getProcesses.forEach((p) => this.normalizeProcess(p, withFaults));
                 }
             });
             return bpmn;
         };
-        this.normalizeProcess = function (process, withFaults = that.withFaults) {
-            that.withFaults = withFaults;
+        this.normalizeProcess = function (process, withFaults = true) {
             if (process instanceof Process) {
                 process.computeInOut();
-                normalizeStarts(process);
+                normalizeStarts(process, withFaults);
                 process.computeInOut();
-                normalizeEnds(process);
+                normalizeEnds(process, withFaults);
                 process.computeInOut();
                 normalizeStartAndEnds(process);
-                normalizeGateways(process);
+                normalizeGateways(process, withFaults);
                 process.computeInOut();
                 normalizeTasks(process);
                 process.computeInOut();
@@ -42,18 +39,18 @@ let Normalizer = (function () {
             }
         };
 
-        let normalizeStarts = function (process) {
+        let normalizeStarts = function (process, withFaults = true) {
             // Detect implicit start nodes
             let starts =
                 asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
 
-            if (starts.length === 0 && that.withFaults) {
+            if (starts.length === 0 && withFaults) {
                 faultBus.addError(process, [], FaultType.NO_START);
                 return;
             }
 
             let implicitStarts = starts.filter((n) => !(n instanceof Start));
-            if (that.withFaults) {
+            if (withFaults) {
                 implicitStarts.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_START));
             }
             let explicitStarts = starts.filter((n) => (n instanceof Start));
@@ -112,18 +109,18 @@ let Normalizer = (function () {
             });
         };
 
-        let normalizeEnds = function (process) {
+        let normalizeEnds = function (process, withFaults = true) {
             // Detect implicit end nodes
             let ends =
                 asList(process.getNodes).filter((n) => asList(n.getOutgoing).length === 0);
 
-            if (ends.length === 0 && that.withFaults) {
+            if (ends.length === 0 && withFaults) {
                 faultBus.addError(process, [], FaultType.NO_END);
                 return;
             }
 
             let implicitEnds = ends.filter((n) => !(n instanceof End));
-            if (that.withFaults) {
+            if (withFaults) {
                 implicitEnds.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_END));
             }
 
@@ -181,7 +178,7 @@ let Normalizer = (function () {
             });
         }
 
-        let normalizeGateways = function (process) {
+        let normalizeGateways = function (process, withFaults = true) {
             let gateways = asList(process.getNodes).filter((n) => (n instanceof Gateway));
             gateways.forEach(function (g) {
                 if (asList(g.getOutgoing).length >= 2 && asList(g.getIncoming).length >= 2) {
@@ -193,13 +190,14 @@ let Normalizer = (function () {
                         e.setSource(n);
                     });
                     process.addEdge(new Edge('n' + elementId++, g, n));
-                }/* else if (asList(g.getOutgoing).length === 1 && asList(g.getIncoming).length === 1) {
+                } else if (asList(g.getOutgoing).length === 1 && asList(g.getIncoming).length === 1) {
+                    if (withFaults) faultBus.addWarning(process, g, FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS);
+                    /*
                     // Replace it with a task
-                    if (that.withFaults) faultBus.addWarning(process, g, FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS);
                     let t = new Task(g.getId, g.getType);
                     t.setUI(g.getUI);
-                    process.replaceNode(g, t);
-                }*/
+                    process.replaceNode(g, t);*/
+                }
             });
         };
 
