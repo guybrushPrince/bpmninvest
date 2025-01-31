@@ -19,101 +19,139 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="canvas"></div>
+    <div id="content" style="display: flex; height: 100vh;">
+        <div id="canvas"></div>
+        <div id="detail-panel">
+            <h3 id="fault-name">Error/Fault Type </h3>
+            <div id="fault-explanation">
+                Here comes the explanation, so you can better understand what is wrong.
+            </div>
+            <button id="error-simulation-button">
+                error simulation
+            </button>
+            <h4 id="header-quick-fix">
+                Quick-Fix
+            </h4>
+            <div id="explanation-quick-fix">
+                This is what we think you should do to fix it.
+                Change the Gateway. Or change the task in place.
+            </div>
+            <button id="quick-fix-button"> Quick-Fix</button>
+        </div>
+    </div>
+    
 
-<button id="save-button">print to console</button>
+    <button id="save-button">print to console</button>
+    <button id="soundness-check">check soundness</button>
 
-<script>
+    <script>
 
-    var diagramUrl = 'example/IS-test.bpmn';//'https://cdn.statically.io/gh/bpmn-io/bpmn-js-examples/dfceecba/starter/diagram.bpmn';
+        var diagramUrl = 'example/arzttermin-faulty.bpmn';//'https://cdn.statically.io/gh/bpmn-io/bpmn-js-examples/dfceecba/starter/diagram.bpmn';
 
-    // modeler instance
-    window.bpmnModeler = new BpmnJS({
-        container: '#canvas',
-        keyboard: {
-            bindTo: window
+        // modeler instance
+        window.bpmnModeler = new BpmnJS({
+            container: '#canvas',
+            keyboard: {
+                bindTo: window
+            }
+        });
+
+        /**
+         * Save diagram contents and print them to the console.
+         */
+        async function exportDiagram() {
+
+            try {
+
+                var result = await bpmnModeler.saveXML({ format: true });
+
+                alert('Diagram exported. Check the developer tools!');
+
+                console.log('DIAGRAM', result.xml);
+            } catch (err) {
+
+                console.error('could not save BPMN 2.0 diagram', err);
+            }
         }
-    });
 
-    /**
-     * Save diagram contents and print them to the console.
-     */
-    async function exportDiagram() {
+        /**
+         * Open diagram in our modeler instance.
+         *
+         * @param {String} bpmnXML diagram to display
+         */
+        async function openDiagram(bpmnXML) {
 
-        try {
+            // import diagram
+            try {
 
-            var result = await bpmnModeler.saveXML({ format: true });
+                await bpmnModeler.importXML(bpmnXML);
 
-            alert('Diagram exported. Check the developer tools!');
+                // access modeler components
+                var canvas = bpmnModeler.get('canvas');
+                var overlays = bpmnModeler.get('overlays');
 
-            console.log('DIAGRAM', result.xml);
-        } catch (err) {
 
-            console.error('could not save BPMN 2.0 diagram', err);
+                // zoom to fit full viewport
+                canvas.zoom('fit-viewport');
+
+                // attach an overlay to a node
+                overlays.add('SCAN_OK', 'note', {
+                    position: {
+                        bottom: 0,
+                        right: 0
+                    },
+                    html: '<div class="diagram-note">Mixed up the labels?</div>'
+                });
+
+                // add marker
+                canvas.addMarker('SCAN_OK', 'needs-discussion');
+            } catch (err) {
+
+                console.error('could not import BPMN 2.0 diagram', err);
+            }
         }
-    }
-
-    /**
-     * Open diagram in our modeler instance.
-     *
-     * @param {String} bpmnXML diagram to display
-     */
-    async function openDiagram(bpmnXML) {
-
-        // import diagram
-        try {
-
-            await bpmnModeler.importXML(bpmnXML);
-
-            // access modeler components
-            var canvas = bpmnModeler.get('canvas');
-            var overlays = bpmnModeler.get('overlays');
 
 
-            // zoom to fit full viewport
-            canvas.zoom('fit-viewport');
+        // load external diagram file via AJAX and open it
+        $.get(diagramUrl, openDiagram, 'text');
 
-            // attach an overlay to a node
-            overlays.add('SCAN_OK', 'note', {
-                position: {
-                    bottom: 0,
-                    right: 0
-                },
-                html: '<div class="diagram-note">Mixed up the labels?</div>'
-            });
+        // wire save button
+        $('#save-button').click(exportDiagram);
 
-            // add marker
-            canvas.addMarker('SCAN_OK', 'needs-discussion');
-        } catch (err) {
+        // wire soundness check button
+        $('#soundness-check').click(soundnessCheck);
 
-            console.error('could not import BPMN 2.0 diagram', err);
+        function soundnessCheck(){
+            startSubscription();
+            SoundnessVerifier().check(
+                LoopDecomposition().decompose(
+                    SCC().findSCCs(
+                        Normalizer.normalize(
+                            analyze()
+                        )
+                    )
+                )
+            );
         }
-    }
 
+    </script>
+    <!--
+    Thanks for trying out our BPMN toolkit!
 
-    // load external diagram file via AJAX and open it
-    $.get(diagramUrl, openDiagram, 'text');
+    This example uses the pre-built distribution of the bpmn-js modeler.
+    Consider rolling your own distribution to have more flexibility
+    regarding which features to include.
 
-    // wire save button
-    $('#save-button').click(exportDiagram);
-</script>
-<!--
-  Thanks for trying out our BPMN toolkit!
+    Checkout our advanced examples section to learn more:
+    * https://github.com/bpmn-io/bpmn-js-examples#advanced
 
-  This example uses the pre-built distribution of the bpmn-js modeler.
-  Consider rolling your own distribution to have more flexibility
-  regarding which features to include.
+    To get a bit broader overview over how bpmn-js works,
+    follow our walkthrough:
+    * https://bpmn.io/toolkit/bpmn-js/walkthrough/
 
-  Checkout our advanced examples section to learn more:
-  * https://github.com/bpmn-io/bpmn-js-examples#advanced
-
-  To get a bit broader overview over how bpmn-js works,
-  follow our walkthrough:
-  * https://bpmn.io/toolkit/bpmn-js/walkthrough/
-
-  Related starters:
-  * https://raw.githubusercontent.com/bpmn-io/bpmn-js-examples/starter/viewer.html
--->
+    Related starters:
+    * https://raw.githubusercontent.com/bpmn-io/bpmn-js-examples/starter/viewer.html
+    -->
 </body>
 <script src="js/settools.js" async></script>
 <script src="js/export.js" async></script>

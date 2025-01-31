@@ -15,8 +15,25 @@ let processFault = function(messageType, process, elements, faultType){
     overlays.add(elementId, messageType, markerConfigs);
     console.log("overlay.add called");
 
-    // Add marker
     let canvas = window.bpmnModeler.get('canvas');
-    canvas.addMarker(elementId, messageType);
-    console.log("marker added");
+    //see if element already has a marker for the same fault
+    //only add if not
+    if (canvas.hasMarker(elementId, messageType) === false){
+        // Add marker
+        canvas.addMarker(elementId, messageType);
+        console.log("marker added");
+        
+        // Add click event to marker
+        let marker = document.querySelector(`[data-container-id="${elementId}"] .${faultType.toLowerCase()}`);
+        console.log(marker);
+        if (marker){
+            marker.addEventListener('click', faultDetails);
+        }
+    }
+}
+
+let faultDetails = function(){
+    console.log("fault details clicked");
+    $('#detail-panel').show();
+    
 }

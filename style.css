@@ -1,7 +1,20 @@
-html, body, #canvas {
+html, body {
     height: 100%;
     padding: 0;
     margin: 0;
+}
+
+#canvas {
+    flex: 1;
+}
+
+#detail-panel {
+    margin: 1px;
+    padding: 1%;
+    width: 15%;
+    position: relative;
+    border: black 1px solid;
+    display: none;
 }
 
 .diagram {
@@ -28,8 +41,8 @@ html, body, #canvas {
     text-align: center;
 }
 
-.warning{
-    background-color: rgb(212, 96, 12, 0.8);
+.djs-overlay > .info{
+    background-color: rgb(19, 211, 245);
     color: black;
     border-radius: 5px;
     font-family: Arial;
@@ -38,7 +51,18 @@ html, body, #canvas {
     min-height: 16px;
     width: 50px;
     text-align: center;
+}
 
+.djs-overlay > .warning{
+    background-color: rgb(245, 218, 19);
+    color: black;
+    border-radius: 5px;
+    font-family: Arial;
+    font-size: 12px;
+    padding: 5px;
+    min-height: 16px;
+    width: 50px;
+    text-align: center;
 }
 
 .error:not(.djs-connection) .djs-visual > :nth-child(1) {
@@ -91,4 +115,10 @@ html, body, #canvas {
     position: fixed;
     bottom: 20px;
     left: 20px;
+}
+
+#soundness-check {
+    position: fixed;
+    bottom: 20px;
+    left: 150px;
 }

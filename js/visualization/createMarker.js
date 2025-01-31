@@ -1,5 +1,5 @@
 function getMarker(faultType, messageType){
-    console.log("marker generated");
+    console.log("generating marker");
 
     let config;
 
@@ -9,7 +9,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ No start node found</div>`   //Fehler wird nicht erkannt
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ No start node found</div>`
         }
     }
 
@@ -19,7 +19,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ No end node found</div>` //Fehler wird nicht erkannt
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ No end node found</div>`
         }
     }
 
@@ -29,7 +29,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ An implicit start node found</div>`  //x
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ An implicit start node found</div>`
         }
     }
 
@@ -39,7 +39,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ An implicit end node found</div>`       //x
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ An implicit end node found</div>`
         }
     }
 
@@ -49,7 +49,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Your gateway has only one flow</div>`    //x
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ Your gateway has only one flow</div>`
         }
     }
 
@@ -59,7 +59,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Loop exits need to be conditional splits</div>`  //fine
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ Loop exits need to be conditional splits</div>`
         }
     }
 
@@ -69,7 +69,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Cyclic parallel gateway found</div>`     //fine
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ Cyclic parallel gateway found</div>`
         }
     }
 
@@ -79,7 +79,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ This should be a cyclic exclusive gateway</div>`     //x
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ This should be a cyclic exclusive gateway</div>`
         }
     }
 
@@ -89,7 +89,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Possible process blockage</div>`     //fine
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ Possible process blockage</div>`
         }
     }
 
@@ -99,7 +99,7 @@ function getMarker(faultType, messageType){
                 bottom: 0,
                 right: 0
             },
-            html:  `<div class="${messageType}">⚠️ Possible unnecessary executions</div>`       //fine
+            html:  `<div class="fault-overlay ${messageType} ${faultType.toLowerCase()}">⚠️ Possible unnecessary executions</div>`
         }
     }
 
@@ -107,52 +107,46 @@ function getMarker(faultType, messageType){
 }
 
 function getJQueryId(process, element, faultType){
-    console.log("element id retrieved");
+    console.log("retrieving element id");
 
-    let id, x, y;
-    let domElement;
+    let id;
 
     if (faultType === 'NO_START' || faultType === 'NO_END'){
         id = String(process.getId);
     }
 
     else if (faultType === 'IMPLICIT_START' || faultType === 'IMPLICIT_END'){
-        if (element[0].getType === "VirtualTask"){
-            domElement = element[0].getUI;
-            id = String(domElement.data('element-id'));
-        }
+        id = element[0].getUI.data('element-id');
+    }
+
+    if (faultType === 'GATEWAY_WITHOUT_MULTIPLE_FLOWS'){
+        id = $(element.getUI['0']).data('element-id');
     }
 
     else if (faultType === 'LOOP_EXIT_NOT_XOR'){
-        domElement = element.exit.getUI;
-        id = String(domElement.data('element-id'));
+        id = element.exit.getUI.data('element-id');
     }
 
     else if (faultType === 'LOOP_ENTRY_IS_AND'){
-        domElement = element.entry.getUI;
-        id = String(domElement.data('element-id'));
+        id = element.entry.getUI.data('element-id');
     }
 
     else if (faultType === 'LOOP_BACK_JOIN_IS_AND'){
-        domElement = element.backjoin.getUI;
-        id = String(domElement.data('element-id'));
+        id = element.backJoin.getUI.data('element-id');
     }
 
     else if (faultType === 'POTENTIAL_DEADLOCK'){
-        domElement = element.join.getUI;
-        id = String(domElement.data('element-id'));
+        id = element.join.getUI.data('element-id');
     }
 
     else if (faultType === 'POTENTIAL_LACK_OF_SYNCHRONIZATION'){
-        domElement = $(element.intersectionPoint.getUI[0]);
-        id = String(domElement.data('element-id'));
+        id = $(element.intersectionPoint.getUI[0]).data('element-id');
     }
 
     return id;
 }
 
-//TODO: block of implicit end/start: what if the if clause does not return true?
 //TODO: put event listeners on the error alerts to open the side-panel for error fixing (depending on what info is written there, the
 //      content of the error alerts (the sentences) should still be improved)
-//TODO: error markers shouldn't be placed jon top of each other
-//TODO: the same error tag should not be placed multiple times on the same element
+//TODO: error markers shouldn't be placed on top of each other
+//NOTICE: if a loop doesn't have an exit, the code throws error (it can't handle this case)

@@ -41,10 +41,7 @@ let Normalizer = (function () {
 
         let normalizeStarts = function (process, withFaults = true) {
             // Detect implicit start nodes
-            console.log("checking for implicit starts");
-            console.log("getting nodes: ", process.getNodes);
             let starts = asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
-            console.log("the starts found: ", starts);
 
             if (starts.length === 0 && withFaults) {
                 faultBus.addError(process, [], FaultType.NO_START);
