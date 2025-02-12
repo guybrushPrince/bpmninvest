@@ -12,6 +12,10 @@
     <!-- modeler distro -->
     <script src="https://unpkg.com/bpmn-js@18.0.0/dist/bpmn-modeler.development.js"></script>
 
+    <!-- token simulation extension -->
+    <!-- <script src="https://unpkg.com/bpmn-js-token-simulation/dist/bpmn-js-token-simulation.umd.js"></script> -->
+    <script src="https://unpkg.com/browse/@yape/plugin-bpmn-js-token-simulator@1.2.0/dist/index.js"></script>
+    
     <!-- needed for this example only -->
     <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.js"></script>
 
@@ -44,16 +48,31 @@
     <button id="save-button">print to console</button>
     <button id="soundness-check">check soundness</button>
 
-    <script>
-
+    <script type="module">
         var diagramUrl = 'example/arzttermin-faulty.bpmn';//'https://cdn.statically.io/gh/bpmn-io/bpmn-js-examples/dfceecba/starter/diagram.bpmn';
 
-        // modeler instance
+        console.log('TokenSimulationModule:', window.TokenSimulationModule);
+
+        import * as TokenSimulation from 'https://cdn.jsdelivr.net/npm/bpmn-js-token-simulation@0.36.3/lib/index.min.js';
+        window.TokenSimulationModule = TokenSimulation.default || TokenSimulation;
+        console.log('Loaded:', window.TokenSimulationModule); // Should log the module
+
+        // modeler instance and necessary configs for token simulation 
         window.bpmnModeler = new BpmnJS({
             container: '#canvas',
             keyboard: {
                 bindTo: window
-            }
+            },
+            additionalModules: [
+                TokenSimulationModule
+            ]
+        });
+
+        window.bpmnViewer = new BpmnJs({
+        container: '#canvas',
+        additionalModules: [
+            TokenSimulationModule
+        ]
         });
 
         /**
@@ -117,6 +136,9 @@
 
         // wire save button
         $('#save-button').click(exportDiagram);
+    </script>
+    <script type="module">
+        import { startSubscription } from "./js/visualization/visualization.js";
 
         // wire soundness check button
         $('#soundness-check').click(soundnessCheck);
@@ -135,23 +157,24 @@
         }
 
     </script>
-    <!--
-    Thanks for trying out our BPMN toolkit!
 
-    This example uses the pre-built distribution of the bpmn-js modeler.
-    Consider rolling your own distribution to have more flexibility
-    regarding which features to include.
+    <!-- token simulation set-up -->
+    <!-- <script>
+        window.modeler = new BpmnJs({
+            container: '#canvas',
+            additionalModules: [
+                TokenSimulationModule
+            ]
+        });
 
-    Checkout our advanced examples section to learn more:
-    * https://github.com/bpmn-io/bpmn-js-examples#advanced
-
-    To get a bit broader overview over how bpmn-js works,
-    follow our walkthrough:
-    * https://bpmn.io/toolkit/bpmn-js/walkthrough/
-
-    Related starters:
-    * https://raw.githubusercontent.com/bpmn-io/bpmn-js-examples/starter/viewer.html
-    -->
+        window.viewer = new BpmnJs({
+        container: '#canvas',
+        additionalModules: [
+            TokenSimulationModule
+        ]
+        });
+    </script> -->
+      
 </body>
 <script src="js/settools.js" async></script>
 <script src="js/export.js" async></script>
@@ -161,6 +184,25 @@
 <script src="js/scc.js" async></script>
 <script src="js/loopdecomp.js" async></script>
 <script src="js/soundness.js" async></script>
-<script src="js/visualization/visualization.js" async></script>
-<script src="js/visualization/createMarker.js" async></script>
+<script type="module" src="js/visualization/visualization.js" async></script>
+<script type="module" src="js/visualization/createMarker.js" async></script>
+<script type="module" src="js/visualization/faultPanel.js" async></script>
+<script type="module" src="js/visualization/tokenSimulator.js" async></script>
 </html>
+<!--
+Thanks for trying out our BPMN toolkit!
+
+This example uses the pre-built distribution of the bpmn-js modeler.
+Consider rolling your own distribution to have more flexibility
+regarding which features to include.
+
+Checkout our advanced examples section to learn more:
+* https://github.com/bpmn-io/bpmn-js-examples#advanced
+
+To get a bit broader overview over how bpmn-js works,
+follow our walkthrough:
+* https://bpmn.io/toolkit/bpmn-js/walkthrough/
+
+Related starters:
+* https://raw.githubusercontent.com/bpmn-io/bpmn-js-examples/starter/viewer.html
+-->

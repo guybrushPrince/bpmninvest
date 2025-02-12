@@ -1,4 +1,4 @@
-function getMarker(faultType, messageType){
+export function getMarker(faultType, messageType){
     console.log("generating marker");
 
     let config;
@@ -106,7 +106,7 @@ function getMarker(faultType, messageType){
     return config;
 }
 
-function getJQueryId(process, element, faultType){
+export function getJQueryId(process, element, faultType){
     console.log("retrieving element id");
 
     let id;
@@ -150,3 +150,6 @@ function getJQueryId(process, element, faultType){
 //      content of the error alerts (the sentences) should still be improved)
 //TODO: error markers shouldn't be placed on top of each other
 //NOTICE: if a loop doesn't have an exit, the code throws error (it can't handle this case)
+
+//Current status: the bpmn-js-token-simulator isn't smoothly integrating into the project. The import statement in tokenSimulator.js is making trouble.
+// ChatGPT says something about CDNs (they would make the package available globally and no imports would be necessary)

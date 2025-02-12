@@ -1,4 +1,7 @@
-let startSubscription = function(){
+import { faultDetails } from "./faultPanel.js";
+import { getMarker, getJQueryId } from "./createMarker.js";
+
+export function startSubscription(){
     faultBus.subscribe(processFault);
 }
 
@@ -30,10 +33,4 @@ let processFault = function(messageType, process, elements, faultType){
             marker.addEventListener('click', faultDetails);
         }
     }
-}
-
-let faultDetails = function(){
-    console.log("fault details clicked");
-    $('#detail-panel').show();
-    
 }
