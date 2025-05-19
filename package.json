@@ -1,1 +1,45 @@
-{}
+{
+  "name": "bpmninvest",
+  "version": "0.0.0",
+  "description": "A soundness algorithm for bpmn-js.",
+  "scripts": {
+    "all": "run-s build",
+    "build": "webpack --mode production",
+    "dev": "webpack-dev-server --static=public --open",
+    "start": "run-s dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "bpmninvest"
+  ],
+  "author": {
+    "name": "Thomas M. Prinz",
+    "url": "https://github.com/guybrushPrince"
+  },
+  "contributors": [
+    {
+      "name": "bpmninvest contributors",
+      "url": ""
+    }
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bpmn-js": "^18.6.1",
+    "diagram-js": "^15.1.0",
+    "jquery": "^3.7.1",
+    "array-flatten": "^3.0.0"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^13.0.0",
+    "css-loader": "^7.1.2",
+    "npm-run-all2": "^8.0.0",
+    "raw-loader": "^4.0.0",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.99.8",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
+  }
+}

@@ -1,3 +1,8 @@
+import $ from 'jquery';
+import { FaultType, faultBus } from "./faultbus.mjs";
+import { asList, diff, intersect, union } from "./settools.mjs";
+import { SCC } from "./scc.mjs";
+
 class UIModel {
     #id;
     #ui;
@@ -10,6 +15,10 @@ class UIModel {
     }
     get getUI() {
         return this.#ui;
+    }
+    get getUI$() {
+        let ui = this.#ui;
+        return $(ui).uniqueSort();
     }
     setUI(ui) {
         this.#ui = ui;
@@ -130,6 +139,14 @@ class Process extends UIModel {
         c += '}';
         return c;
     }
+
+    isValid() {
+        let nodes = this.getNodes;
+        asList(this.getEdges).forEach(e => {
+            if (!(e.getSource.getId in nodes)) console.log([e.getSource, 'missing', e, this, nodes]);
+            if (!(e.getTarget.getId in nodes)) console.log([e.getTarget, 'missing', e, this, nodes]);
+        });
+    }
 }
 class LoopProcess extends Process {}
 
@@ -198,6 +215,9 @@ class LoopTask extends Task {
         super(id, 'LoopNode');
         this.#loop = loop;
     }
+    get getLoop() {
+        return this.#loop;
+    }
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=box3d,label="' + this.#loop.getId + '"];';
     }
@@ -221,6 +241,9 @@ class Gateway extends Node {
 
     get getKind() {
         return this.#kind;
+    }
+    setKind(kind) {
+        this.#kind = kind;
     }
 
     get copy() {
@@ -301,6 +324,7 @@ class Loop extends UIModel {
     #nodes = {};
     #entries = {};
     #exits = {};
+    #edges = null;
     #doBody = null;
     #process = null;
     constructor(id, process) {
@@ -316,6 +340,24 @@ class Loop extends UIModel {
     }
     get getExits() {
         return this.#exits;
+    }
+    get getEdges() {
+        if (this.#process !== null) {
+            if (this.#edges === null) {
+                this.#edges = asList(this.#process.getEdges).reduce((all, edge) => {
+                    if (edge.getSource.getId in this.#nodes &&
+                        edge.getTarget.getId in this.#nodes) {
+                        all[edge.getId] = edge;
+                    }
+                    return all;
+                }, {});
+                let ui = this.getUI;
+                if (!Array.isArray(ui)) ui = ui.toArray();
+                this.setUI([...new Set(ui.concat(asList(this.#edges).map(e => e.getUI)))]);
+            }
+            return this.#edges;
+        }
+        return null;
     }
 
     addNode(node) {
@@ -385,3 +427,6 @@ class Loop extends UIModel {
         return doBody;
     }
 }
+
+export { BPMNModel, Process, Node, Edge, Start, End, Gateway, GatewayType, Task, Loop, LoopTask, VirtualTask,
+    EventType, MessageFlow, LoopProcess }

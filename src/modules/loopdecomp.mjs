@@ -1,3 +1,7 @@
+import { asList, union, intersect, diff } from "./settools.mjs";
+import { BPMNModel, Start, End, Gateway, GatewayType, LoopProcess, LoopTask, Edge, VirtualTask } from "./model.mjs";
+import { Normalizer } from "./normalize.mjs";
+
 /**
  * Performs a loop decomposition of given process models and returns a set of acyclic process models where
  * acyclic process models resulting of loops are of type LoopProcess.
@@ -13,7 +17,7 @@
  * Understanding and Decomposing Control-Flow Loops in Business Process Models. BPM 2022: 307-323
  * DOI: https://doi.org/10.1007/978-3-031-16103-2_21
  */
-let LoopDecomposition = (function () {
+const LoopDecomposition = (function () {
 
     let elementId = 0;
 
@@ -47,6 +51,7 @@ let LoopDecomposition = (function () {
          * @returns {{}}
          */
         let decomposeProcess = function (process) {
+            console.log('Decompose', process);
             let loops = process.getLoops;
             if (loops.length === 0) {
                 // The process model is already acyclic and needs no decomposition.
@@ -102,6 +107,10 @@ let LoopDecomposition = (function () {
                 } else realEntries = loop.getEntries;
                 let processRealEntries = intersect(process.getNodes, realEntries);
                 let processExits = intersect(process.getNodes, loop.getExits);
+
+                // Repair all exits and entries
+                asList(loop.getExits).forEach(el => el.setKind(GatewayType.XOR));
+                asList(loop.getEntries).forEach(el => el.getKind === GatewayType.AND ? el.setKind(GatewayType.OR) : el.getKind);
 
                 // Remove all nodes of the loop being not in its do-body (except the exits).
                 let nonDoBody = diff(loop.getNodes, loop.getDoBody);
@@ -280,3 +289,5 @@ let LoopDecomposition = (function () {
         return new LoopDecompositionFactory();
     }
 })();
+
+export { LoopDecomposition };

@@ -1,4 +1,7 @@
-let FaultType = {
+/**
+ * Fault types.
+ */
+const FaultType = {
     NO_START: 'NO_START',
     NO_END: 'NO_END',
     IMPLICIT_START: 'IMPLICIT_START',
@@ -11,43 +14,54 @@ let FaultType = {
     POTENTIAL_LACK_OF_SYNCHRONIZATION: 'POTENTIAL_LACK_OF_SYNCHRONIZATION'
 };
 
-let faultBus = (function () {
+const FAULT_LEVEL = {
+    INFO: 'info',
+    WARNING: 'warning',
+    ERROR: 'error'
+};
+
+/**
+ * Export a fault bus.
+ * @type {FaultBus}
+ */
+const faultBus = (function () {
     function FaultBus() {
         this.observers = []; // Array to store observers
 
         // Notify observers about fault
         this.addInfo = function (process, elements, fault) {
-            console.log("Info:", [process, elements, fault]);
-            this.notify('info', process, elements, fault);
+            console.log(FAULT_LEVEL.INFO, [process, elements, fault]);
+            this.notify(FAULT_LEVEL.INFO, process, elements, fault);
         };
 
         this.addWarning = function (process, elements, fault) {
-            console.log("Warning:", [process, elements, fault]);
-            this.notify('warning', process, elements, fault);
+            console.log(FAULT_LEVEL.WARNING, [process, elements, fault]);
+            this.notify(FAULT_LEVEL.WARNING, process, elements, fault);
         };
 
         this.addError = function (process, elements, fault) {
-            console.log("Error:", [process, elements, fault]);
-            this.notify('error', process, elements, fault);
+            console.log(FAULT_LEVEL.ERROR, [process, elements, fault]);
+            this.notify(FAULT_LEVEL.ERROR, process, elements, fault);
         };
 
         // Add an observer
-        this.subscribe = function (func) {
-            this.observers.push(func);
-            console.log("new subscriber added");
+        this.subscribe = function (ob) {
+            this.observers.push(ob);
         };
 
         // Remove an observer
-        this.unsubscribe = function (func) {
-            this.observers = this.observers.filter((observer) => observer !== func);
+        this.unsubscribe = function (ob) {
+            this.observers = this.observers.filter((observer) => observer !== ob);
         };
 
         // Notify all observers
         this.notify = function (type, process, elements, fault) {
             this.observers.forEach(observer => {
-                observer(type, process, elements, fault);
+                observer.notify(type, process, elements, fault);
             });
         };
     }
     return new FaultBus();
 })();
+
+export { FaultType, faultBus };

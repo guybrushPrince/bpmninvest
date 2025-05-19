@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Compute the set intersection of s1 and s2.
  * @param s1 The object representing set 1.
@@ -41,6 +42,12 @@ let union = function (s1, s2) {
  * @param s The object representing the set.
  * @returns []
  */
-let asList = function(s) {
+let asList = function (s) {
     return Object.values(s);
+};
+
+let asObject = function (l) {
+    return l.reduce((o,i) => { o[i.getId] = i; return o; }, {});
 }
+
+export { intersect, diff, union, asList, asObject };

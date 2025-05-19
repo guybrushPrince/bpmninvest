@@ -1,3 +1,9 @@
+"use strict";
+import { asList, union, diff, intersect, asObject } from "./settools.mjs";
+import {Start, Gateway, GatewayType, LoopTask} from "./model.mjs";
+import { FaultType, faultBus } from "./faultbus.mjs";
+import { flatten } from "array-flatten";
+
 /**
  * Verifies acyclic process models regarding soundness. It uses two different analyses, one for deadlocks and one for
  * lack of synchronizations. The approach is based on:
@@ -8,13 +14,12 @@
  * DOI: https://doi.org/10.7250/csimq.2021-27.01
  *
  */
-let SoundnessVerifier = (function () {
-
-    let elementId = 0;
+const SoundnessVerifier = (function () {
 
     function SoundnessVerifierFactory() {
 
         this.check = function (acyclicProcesses) {
+            console.log('Check soundness', acyclicProcesses);
             if (typeof acyclicProcesses === 'object') acyclicProcesses = asList(acyclicProcesses);
             if (!Array.isArray(acyclicProcesses)) acyclicProcesses = [ acyclicProcesses ];
             acyclicProcesses.forEach((process) => {
@@ -56,6 +61,7 @@ let SoundnessVerifier = (function () {
                     }, {});
                 }
                 // Kill information.
+                console.log([n, n.getId, info[n.getId], andTriggers[n.getId], process.getNodes, topOrder]);
                 info[n.getId] = diff(info[n.getId], andTriggers[n.getId]);
             });
             // info contains the set of join nodes at the start(s) and are propagated through the process model.
@@ -65,11 +71,12 @@ let SoundnessVerifier = (function () {
             andJoins.forEach(j => {
                 if (j.getId in info[j.getId]) {
                     faultBus.addError(process, {
-                        join: j
+                        join: j,
+                        paths: determineTriggerLessPath(info, j)
                     }, FaultType.POTENTIAL_DEADLOCK);
                 }
             });
-        }
+        };
 
         /**
          * Determine the triggers of AND joins. These are those nodes, which trigger all predecessors of the AND gateway.
@@ -197,7 +204,64 @@ let SoundnessVerifier = (function () {
                 });
             }
             return L;
-        }
+        };
+
+        /**
+         * Determines paths to a given join without triggers (for fault visualization).
+         * @param info
+         * @param join
+         * @param node
+         * @param visited
+         * @returns {{}}
+         */
+        let determineTriggerLessPath = function (info, join) {
+            let visited = {};
+            visited[join.getId] = join;
+
+            let blowUpWithLoopNodes = function (nodes) {
+                let handled = {};
+                let previous = 0;
+                do {
+                    previous = handled.length;
+                    asList(nodes).forEach(n => {
+                        if (n instanceof LoopTask && !(n.getId in handled)) {
+                            nodes = union(nodes, n.getLoop.getNodes);
+                            nodes = union(nodes, n.getLoop.getEdges);
+                            handled[n.getId] = n;
+                        }
+                    });
+                } while (previous < handled.length);
+                return nodes;
+            };
+
+            let search = function (node) {
+                console.log(['Visit', node.getId, visited]);
+                let pre = diff(node.getPreset, visited);
+                console.log([pre, info]);
+                let withInfo = asObject(asList(pre).filter(p => {
+                    return join.getId in info[p.getId];
+                }));
+                console.log(withInfo);
+                //let last = diff(pre, withInfo);
+                pre = union({}, withInfo);
+                console.log(pre);
+                //visited = union(visited, last);
+                visited = union(visited, pre);
+                asList(pre).forEach(p => {
+                    search(p);
+                });
+            };
+            search(join);
+            visited = blowUpWithLoopNodes(visited);
+            visited = union(visited, asObject(flatten(asList(visited).map(p => {
+                if (p instanceof Node) {
+                    return asList(union(p.getIncoming, p.getOutgoing)).filter(e => {
+                        return e.getTarget.getId in visited;
+                    });
+                } else return [];
+            }))));
+            return visited;
+        };
 
 
 
@@ -433,3 +497,5 @@ let SoundnessVerifier = (function () {
         return new SoundnessVerifierFactory();
     }
 })();
+
+export { SoundnessVerifier };

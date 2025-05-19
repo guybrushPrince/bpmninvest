@@ -1,3 +1,4 @@
+"use strict";
 /**
  * The normalizer creates a more easy to handle process model out of valid BPMN model. This includes:
  * 1. Normalize starts when there are multiple ones.
@@ -7,13 +8,21 @@
  * 5. Normalize tasks when they have multiple incoming or multiple outgoing flows.
  * 6. Add tasks between directly connected gateways.
  */
-let Normalizer = (function () {
+import { FaultType, faultBus  } from "./faultbus.mjs";
+import { BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask } from "./model.mjs";
+import { asList } from "./settools.mjs";
+
+/**
+ * Normalizes a process model out of a BPMN model.
+ * @type {NormalizerFactory}
+ */
+const Normalizer = (function () {
 
     function NormalizerFactory() {
         let elementId = 1;
-        let that = this;
 
         this.normalize = function (bpmn, withFaults = true) {
+            console.log('Normalize', bpmn);
             if (!Array.isArray(bpmn)) bpmn = [bpmn];
             bpmn.forEach((bpmn) => {
                 if (bpmn instanceof BPMNModel) {
@@ -24,20 +33,48 @@ let Normalizer = (function () {
         };
         this.normalizeProcess = function (process, withFaults = true) {
             if (process instanceof Process) {
+                normalizeSingletonProcess(process);
                 process.computeInOut();
                 normalizeStarts(process, withFaults);
+                process.isValid();
                 process.computeInOut();
                 normalizeEnds(process, withFaults);
+                process.isValid();
                 process.computeInOut();
                 normalizeStartAndEnds(process);
+                process.isValid();
                 normalizeGateways(process, withFaults);
+                process.isValid();
                 process.computeInOut();
                 normalizeTasks(process);
+                process.isValid();
                 process.computeInOut();
                 normalizeFlows(process);
+                process.isValid();
                 process.computeInOut();
             }
         };
+
+        let normalizeSingletonProcess = function (process) {
+            // If there is a process model with just a single node ...
+            if (process.getNodes.length === 1) {
+                // ... add one to have a process with start and end.
+                let newNode;
+                let newEdge;
+                let single = asList(process.getNodes)[0];
+                if (single instanceof End) {
+                    newNode = new Start('n' + elementId++, 'StartEvent');
+                    newEdge = new Edge('n' + elementId++, newNode, single);
+                } else {
+                    newNode = new End('n' + elementId++, 'EndEvent');
+                    newEdge = new Edge('n' + elementId++, single, newNode);
+                }
+                newNode.setUI(single.getUI);
+                process.addNode(newNode);
+                newEdge.setUI(single.getUI);
+                process.addEdge(newEdge);
+            }
+        }
 
         let normalizeStarts = function (process, withFaults = true) {
             // Detect implicit start nodes
@@ -129,7 +166,7 @@ let Normalizer = (function () {
 
             let or = null;
             if (ends.length >= 2) {
-                or = new Gateway('n' + elementId++, null, (that.withFaults ? GatewayType.OR : GatewayType.XOR));
+                or = new Gateway('n' + elementId++, null, (withFaults ? GatewayType.OR : GatewayType.XOR));
                 or.setUI(ends.map((e) => e.getUI));
                 process.addNode(or);
                 ends.forEach(function (end) {
@@ -252,3 +289,5 @@ let Normalizer = (function () {
 
     return new NormalizerFactory();
 })();
+
+export { Normalizer };

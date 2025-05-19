@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Finds strongly connected components (aka loops) in a given model.
  * As methodology, the algorithm of Tarjan is used:
@@ -5,6 +6,10 @@
  * R. E. Tarjan, Depth-first search and linear graph algorithms, SIAM J. Comput. 1 (2) (1972) 146–160.
  * doi:10.1137/0201010.
  */
+import { asList, union, diff, intersect } from "./settools.mjs";
+import { BPMNModel, Loop, Gateway, GatewayType } from "./model.mjs";
+import { FaultType, faultBus } from "./faultbus.mjs";
+
 let SCC = function () {
 
     let loopId = 0;
@@ -40,6 +45,7 @@ let SCC = function () {
          * @returns {*[]}
          */
         this.analyze = function (process) {
+            console.log('Find SCCs', process);
             // Initialize
             asList(process.getNodes).forEach((n) => {
                 index[n.getId] = -1;
@@ -129,3 +135,5 @@ let SCC = function () {
 
     return new SCCFactory();
 };
+
+export { SCC };

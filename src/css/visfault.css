@@ -1,0 +1,101 @@
+:root {
+    --info-color: rgba(50, 100, 200, 0.7);
+    --warning-color: rgb(241, 227, 93, 0.7);
+    --error-color: rgba(205, 50, 50, 0.7);
+    --hint-color: rgb(255, 244, 158, 1.0);
+    --dark-trans: rgb(0, 0, 0, 0.3);
+
+    --light-font: rgba(250, 250, 250, 1.0);
+    --dark-font: rgba(5, 5, 5, 1.0);
+}
+.note {
+    background-color: var(--note-background);
+    color: var(--note-font-color);
+    border-radius: 5px;
+    font-family: Arial, serif;
+    font-size: 12px;
+    padding: 5px;
+    min-height: 16px;
+    min-width: 150px;
+    width: -moz-fit-content;
+    width: fit-content;
+    text-align: center;
+    display: none;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+    align-items: center;
+}
+.djs-overlays.hover .note, .djs-overlays.selected .note {
+    display: flex;
+}
+.djs-overlays .err-con {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.d-opener {
+    background-color: var(--dark-trans);
+    color: var(--light-font);
+    font-weight: bold;
+    border-radius: 50%;
+    padding: 5px;
+    cursor: pointer;
+    font-size: 18px;
+    text-align: center;
+    min-width: 30px;
+    min-height: 30px;
+    width: 30px;
+    height: 30px;
+}
+/*.djs-overlays.hover .d-opener {
+    display: inherit;
+}*/
+.d-panel {
+    height: 100%;
+    position: fixed;
+    top: 0; right: 0;
+    width: 30%;
+    background: var(--hint-color);
+    color: var(--dark-font);
+}
+.info-line {
+    --stroke-color: var(--info-color);
+}
+.warning-line {
+    --stroke-color: var(--warning-color);
+}
+.error-line {
+    --stroke-color: var(--error-color);
+}
+.vis-line .djs-visual path {
+    stroke: var(--stroke-color) !important;
+    fill: var(--stroke-color) !important;
+}
+.vis-line .djs-visual rect {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual circle {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual polygon {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual marker * {
+    fill: var(--stroke-color) !important;
+}
+.note.info {
+    --note-background: var(--info-color);
+    --note-font-color: var(--light-font);
+}
+.note.warning {
+    --note-background: var(--warning-color);
+    --note-font-color: var(--dark-font);
+}
+.note.error {
+    --note-background: var(--error-color);;
+    --note-font-color: var(--light-font);
+}
+.hint-fade:not(.non-fade) {
+    opacity: 0.2;
+}
