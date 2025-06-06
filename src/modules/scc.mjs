@@ -9,6 +9,7 @@
 import { asList, union, diff, intersect } from "./settools.mjs";
 import { BPMNModel, Loop, Gateway, GatewayType } from "./model.mjs";
 import { FaultType, faultBus } from "./faultbus.mjs";
+import {PathFinderFactory} from "./pathfinder.mjs";
 
 let SCC = function () {
 
@@ -89,6 +90,7 @@ let SCC = function () {
                     current = stack.pop();
                     component.addNode(current);
                     component.getUI.push(current.getUI);
+                    component.addElementId(current.elementIds);
                     preset = union(preset, current.getPreset);
                     postset = union(postset, current.getPostset);
                 } while (current.getId !== node.getId);
@@ -101,6 +103,7 @@ let SCC = function () {
                     asList(preset).forEach(i => component.addEntries(intersect(i.getPostset, component.getNodes)));
                     asList(postset).forEach(o => component.addExits(intersect(o.getPreset, component.getNodes)));
                     component.getDoBody;
+                    component.getEdges;
                     // By
                     //
                     // Prinz, T. M., Choi, Y. & Ha, N. L. (2024).
@@ -112,16 +115,52 @@ let SCC = function () {
                         if (exit instanceof Gateway && exit.getKind !== GatewayType.XOR) {
                             faultBus.addError(
                                 process,
-                                { exit: exit, loop: component},
+                                {
+                                    exit: exit,
+                                    loop: component,
+                                    out: intersect(exit.getPostset, postset),
+                                    simulation: {
+                                        pathToExit: function (process) {
+                                            let pathFinder = PathFinderFactory();
+                                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
+                                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                                            return pathToExit;
+                                        },
+                                        exit: exit
+                                    }
+                                },
                                 FaultType.LOOP_EXIT_NOT_XOR
                             );
                         }
                     });
                     asList(component.getEntries).forEach(entry => {
                         if (entry instanceof Gateway && entry.getKind === GatewayType.AND) {
+                            // We find a path to any exit that we force to execute.
+                            let exit = asList(component.getExits).shift();
+                            let inLoop = intersect(component.getEdges, entry.getIncoming);
+                            let inLoopSel = asList(inLoop)[0];
                             faultBus.addError(
                                 process,
-                                { entry: entry, loop: component},
+                                {
+                                    entry: entry,
+                                    loop: component,
+                                    simulation: {
+                                        pathToExit: function (process) {
+                                            let pathFinder = PathFinderFactory();
+                                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
+                                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                                            return pathToExit;
+                                        },
+                                        pathToEntry: function (process) {
+                                            let pathFinder = PathFinderFactory();
+                                            let pathToEntry = pathFinder.findPathFromStartToTarget(inLoopSel.getSource, process);
+                                            if (pathToEntry !== null) pathToEntry = pathFinder.modelPathToBPMNPath(pathToEntry);
+                                            return pathToEntry;
+                                        },
+                                        exit: exit,
+                                        entry: entry
+                                    }
+                                },
                                 FaultType.LOOP_ENTRY_IS_AND
                             );
                         }

@@ -1,11 +1,13 @@
 import $ from 'jquery';
 import { FaultType, faultBus } from "./faultbus.mjs";
-import { asList, diff, intersect, union } from "./settools.mjs";
+import {asList, asObject, diff, intersect, union} from "./settools.mjs";
 import { SCC } from "./scc.mjs";
+import {flatten} from "array-flatten";
 
 class UIModel {
     #id;
     #ui;
+    #elementIds = {};
     constructor(id) {
         this.#id = id;
         this.#ui = $('[data-element-id="' + id + '"]');
@@ -22,6 +24,19 @@ class UIModel {
     }
     setUI(ui) {
         this.#ui = ui;
+    }
+    addElementId(id) {
+        if (typeof id === 'string') {
+            this.#elementIds[id] = id;
+            return;
+        }
+        if (Array.isArray(id)) {
+            id = asObject(flatten(id.map(i => asList(i))));
+        }
+        this.#elementIds = union(this.#elementIds, id);
+    }
+    get elementIds() {
+        return this.#elementIds;
     }
 }
 class BPMNModel extends UIModel {
@@ -62,6 +77,7 @@ class Process extends UIModel {
     #ends = null;
 
     #loops = null;
+    #super = null;
 
     get getNodes() {
         return this.#nodes;
@@ -112,6 +128,11 @@ class Process extends UIModel {
         this.#loops = loops;
     }
 
+    setSuper(process) {
+        this.#super = process;
+    }
+    get getSuper() { return this.#super; }
+
 
     resetInOut() {
         asList(this.#nodes).forEach(function (node) {
@@ -156,6 +177,7 @@ class Node extends UIModel {
     #outgoing = {};
     #preset = {};
     #postset = {};
+    #repaired = false;
     constructor(id, type) {
         super(id);
         this.#type = type;
@@ -181,6 +203,9 @@ class Node extends UIModel {
 
     addPreset(i) { this.#preset[i.getId] = i; }
     addPostset(o) { this.#postset[o.getId] = o; }
+
+    get isRepaired() { return this.#repaired; }
+    setRepaired(repaired) { this.#repaired = repaired; }
 
     get copy() {
         return new Node(this.getId, this.getType);
@@ -209,6 +234,7 @@ class VirtualTask extends Node {
     }
 }
 
+
 class LoopTask extends Task {
     #loop;
     constructor(id, loop) {
@@ -222,7 +248,6 @@ class LoopTask extends Task {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=box3d,label="' + this.#loop.getId + '"];';
     }
 }
-
 const GatewayType = {
     AND: 'AND',
     XOR: 'XOR',
@@ -230,6 +255,7 @@ const GatewayType = {
 }
 class Gateway extends Node {
     #kind;
+    #divergingEnd = false;
     constructor(id, type, kind = null) {
         super(id, type);
         if (kind === null) {
@@ -246,6 +272,9 @@ class Gateway extends Node {
         this.#kind = kind;
     }
 
+    setDivergingEnd(divEnd) { this.#divergingEnd = divEnd; }
+    get isDivergingEnd() { return this.#divergingEnd; }
+
     get copy() {
         return new Gateway(this.getId, this.getType, this.#kind);
     }
@@ -253,6 +282,23 @@ class Gateway extends Node {
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=diamond,label="' + this.#kind + '"];';
     }
+}
+class LoopEntryGateway extends Gateway {
+    #entries;
+    constructor(id, entries) {
+        super(id, 'LoopEntryGateway', GatewayType.XOR);
+        this.#entries = entries;
+    }
+    get getEntries() { return this.#entries; }
+}
+
+class LoopExitGateway extends Gateway {
+    #exits;
+    constructor(id, exits) {
+        super(id, 'LoopExitGateway', GatewayType.XOR);
+        this.#exits = exits;
+    }
+    get getExits() { return this.#exits; }
 }
 const EventType = {
     MESSAGE: 'MESSAGE',
@@ -378,6 +424,7 @@ class Loop extends UIModel {
     setProcess(process) {
         this.#process = process;
     }
+    get getProcess() { return this.#process; }
 
     get getDoBody() {
         if (this.#doBody !== null) return this.#doBody;
@@ -412,11 +459,17 @@ class Loop extends UIModel {
         asList(doBody).forEach(node => {
             if (node instanceof Gateway) {
                 if (!(node.getId in this.getEntries)) {
-                    let isBackJoin = asList(node.getPreset).filter(p => !(p.getId in doBody)).length >= 1;
+                    let notInDoBody = asList(node.getPreset).filter(p => !(p.getId in doBody));
+                    let isBackJoin = notInDoBody.length >= 1;
                     if (isBackJoin && node.getKind === GatewayType.AND) {
                         faultBus.addError(
                             this.#process,
-                            { backJoin: node, loop: this },
+                            {
+                                backJoin: node,
+                                loop: this,
+                                paths: blowUpWithEdges(blowUpWithLoopNodes(doBody)),
+                                flaws: asObject(notInDoBody)
+                            },
                             FaultType.LOOP_BACK_JOIN_IS_AND
                         );
                     }
@@ -428,5 +481,31 @@ class Loop extends UIModel {
     }
 }
 
-export { BPMNModel, Process, Node, Edge, Start, End, Gateway, GatewayType, Task, Loop, LoopTask, VirtualTask,
-    EventType, MessageFlow, LoopProcess }
+let blowUpWithLoopNodes = function (elements) {
+    let handled = {};
+    let previous = 0;
+    do {
+        previous = handled.length;
+        asList(elements).forEach(n => {
+            if (n instanceof LoopTask && !(n.getId in handled)) {
+                elements = union(elements, n.getLoop.getNodes);
+                elements = union(elements, n.getLoop.getEdges);
+                handled[n.getId] = n;
+            }
+        });
+    } while (previous < handled.length);
+    return elements;
+};
+
+let blowUpWithEdges = function (elements) {
+    return union(elements, asObject(flatten(asList(elements).map(p => {
+        if (p instanceof Node) {
+            return asList(union(p.getIncoming, p.getOutgoing)).filter(e => {
+                return e.getTarget.getId in elements;
+            });
+        } else return [];
+    }))));
+};
+
+export { BPMNModel, Process, Node, Edge, Start, End, Gateway, GatewayType, Task, Loop, LoopEntryGateway, LoopTask,
+    LoopExitGateway, VirtualTask, EventType, MessageFlow, LoopProcess, blowUpWithLoopNodes, blowUpWithEdges }

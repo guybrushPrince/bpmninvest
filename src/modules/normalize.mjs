@@ -10,7 +10,9 @@
  */
 import { FaultType, faultBus  } from "./faultbus.mjs";
 import { BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask } from "./model.mjs";
-import { asList } from "./settools.mjs";
+import {asList, union} from "./settools.mjs";
+import {flatten} from "array-flatten";
+import {PathFinderFactory} from "./pathfinder.mjs";
 
 /**
  * Normalizes a process model out of a BPMN model.
@@ -70,8 +72,10 @@ const Normalizer = (function () {
                     newEdge = new Edge('n' + elementId++, single, newNode);
                 }
                 newNode.setUI(single.getUI);
+                newNode.addElementId(single.elementIds);
                 process.addNode(newNode);
                 newEdge.setUI(single.getUI);
+                newEdge.addElementId(single.elementIds);
                 process.addEdge(newEdge);
             }
         }
@@ -85,11 +89,16 @@ const Normalizer = (function () {
                 return;
             }
 
+            let explicitStarts = starts.filter((n) => (n instanceof Start));
             let implicitStarts = starts.filter((n) => !(n instanceof Start));
             if (withFaults) {
-                implicitStarts.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_START));
+                implicitStarts.forEach((n) => faultBus.addInfo(process, {
+                    implicitStart: [ n ],
+                    simulation: {
+                        starts: explicitStarts
+                    }
+                }, FaultType.IMPLICIT_START));
             }
-            let explicitStarts = starts.filter((n) => (n instanceof Start));
 
             // By the BPMN spec, start events are mutually explicit.
             // Implicit starts, however, get always parallel to a start events a token.
@@ -102,10 +111,12 @@ const Normalizer = (function () {
                 if (explicitStarts.length >= 2) {
                     xor = new Gateway('n' + elementId++, null, GatewayType.XOR);
                     xor.setUI(explicitStarts.map((s) => s.getUI));
+                    xor.addElementId(flatten(explicitStarts.map((s) => s.elementIds)));
                     process.addNode(xor);
                     explicitStarts.forEach(function (start) {
                         let sf = new Edge('n' + elementId++, xor, start);
                         sf.setUI(start.getUI);
+                        sf.addElementId(start.elementIds);
                         process.addEdge(sf);
                     });
                 }
@@ -115,6 +126,7 @@ const Normalizer = (function () {
                 if (xor !== null || implicitStarts.length >= 2) {
                     and = new Gateway('n' + elementId++, null, GatewayType.AND);
                     and.setUI(implicitStarts.map((s) => s.getUI));
+                    and.addElementId(flatten(implicitStarts.map((s) => s.elementIds)));
                     process.addNode(and);
                     implicitStarts.forEach(function (start) {
                         process.addEdge(new Edge('n' + elementId++, and, start));
@@ -122,6 +134,7 @@ const Normalizer = (function () {
                     if (xor !== null) {
                         and.getUI.push(xor.getUI);
                         and.getUI.flat();
+                        and.addElementId(xor.elementIds);
                         process.addEdge(new Edge('n' + elementId++, and, xor));
                     }
                 } else {
@@ -131,6 +144,7 @@ const Normalizer = (function () {
             if (!(and instanceof Start) || asList(and.getOutgoing).length >= 2) {
                 let start = new Start('n' + elementId++, 'StartEvent');
                 start.setUI(and.getUI);
+                start.addElementId(and.elementIds);
                 process.addNode(start);
                 process.addEdge(new Edge('n' + elementId++, start, and));
             }
@@ -140,6 +154,7 @@ const Normalizer = (function () {
                 if (asList(start.getOutgoing).length >= 2) {
                     let nStart = new Gateway(start.getId, null, GatewayType.AND);
                     nStart.setUI(start.getUI);
+                    nStart.addElementId(start.elementIds);
                     process.replaceNode(start, nStart, false);
                 }
             });
@@ -157,7 +172,12 @@ const Normalizer = (function () {
 
             let implicitEnds = ends.filter((n) => !(n instanceof End));
             if (withFaults) {
-                implicitEnds.forEach((n) => faultBus.addInfo(process, [n], FaultType.IMPLICIT_END));
+                implicitEnds.forEach((n) => faultBus.addInfo(process, {
+                    implicitEnd: [ n ],
+                    simulation: {
+                        path: PathFinderFactory().findPathFromStartToTarget(n, process)
+                    }
+                }, FaultType.IMPLICIT_END));
             }
 
             // By the BPMN spec, p. 248, a process is in a running state until all tokens are consumed.
@@ -168,16 +188,20 @@ const Normalizer = (function () {
             if (ends.length >= 2) {
                 or = new Gateway('n' + elementId++, null, (withFaults ? GatewayType.OR : GatewayType.XOR));
                 or.setUI(ends.map((e) => e.getUI));
+                or.addElementId(flatten(ends.map((e) => e.elementIds)));
+                if (!withFaults) or.setDivergingEnd(true);
                 process.addNode(or);
                 ends.forEach(function (end) {
                     if (end instanceof End && asList(end.getIncoming).length >= 2) {
                         // If an end event has multiple incoming flows, make the joining behavior explicit.
                         let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                         nEnd.setUI(end.getUI);
+                        nEnd.addElementId(end.elementIds);
                         process.replaceNode(end, nEnd, false);
                         end = nEnd;
                     }
                     let sf = new Edge('n' + elementId++, end, or);
+                    sf.addElementId(union(end.elementIds, or.elementIds));
                     process.addEdge(sf);
                 });
             }
@@ -187,6 +211,7 @@ const Normalizer = (function () {
                 if (end instanceof End && asList(end.getIncoming).length >= 2) {
                     let nEnd = new Gateway(end.getId, null, GatewayType.OR);
                     nEnd.setUI(end.getUI);
+                    nEnd.addElementId(end.elementIds);
                     process.replaceNode(end, nEnd, false);
                     or = nEnd;
                 }
@@ -195,8 +220,15 @@ const Normalizer = (function () {
             if (or !== null) {
                 let end = new End('n' + elementId++, 'EndEvent');
                 end.setUI(or.getUI);
+                end.addElementId(or.elementIds);
                 process.addNode(end);
                 process.addEdge(new Edge('n' + elementId++, or, end));
+            } else if (ends.length === 1 && implicitEnds.length === 1) {
+                let end = new End('n' + elementId++, 'EndEvent');
+                end.setUI(ends[0].getUI);
+                end.addElementId(ends[0].elementIds);
+                process.addNode(end);
+                process.addEdge(new Edge('n' + elementId++, ends[0], end));
             }
         };
 
@@ -207,6 +239,7 @@ const Normalizer = (function () {
                     (s instanceof End && asList(s.getOutgoing).length >= 1)) {
                     let nS = new Task(s.getId, s.className);
                     nS.setUI(s.getUI);
+                    nS.addElementId(s.elementIds);
                     process.replaceNode(s, nS, false);
                     nS.setIncoming(s.getIncoming);
                     nS.setOutgoing(s.getOutgoing);
@@ -221,6 +254,7 @@ const Normalizer = (function () {
                     // Split the gateway into two.
                     let n = new Gateway('n' + elementId++, null, g.getKind);
                     n.setUI(g.getUI);
+                    n.addElementId(g.elementIds);
                     process.addNode(n);
                     asList(g.getOutgoing).forEach(function (e) {
                         e.setSource(n);
@@ -247,6 +281,7 @@ const Normalizer = (function () {
                 if (asList(t.getIncoming).length >= 2) {
                     let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
                     g.setUI(t.getUI);
+                    g.addElementId(t.elementIds);
                     process.addNode(g);
                     asList(t.getIncoming).forEach(function (e) {
                         e.setTarget(g);
@@ -260,6 +295,7 @@ const Normalizer = (function () {
                     // Split the gateway into two.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);
                     g.setUI(t.getUI);
+                    g.addElementId(t.elementIds);
                     process.addNode(g);
                     asList(t.getOutgoing).forEach(function (e) {
                         e.setSource(g);
@@ -278,6 +314,7 @@ const Normalizer = (function () {
                         // We add a task in between them to simplify analysis.
                         let t = new VirtualTask('n' + elementId++);
                         t.setUI(e.getUI);
+                        t.addElementId(e.elementIds);
                         process.addNode(t);
                         e.setTarget(t);
                         process.addEdge(new Edge('n' + elementId++, t, s));

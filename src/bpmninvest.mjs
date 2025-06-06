@@ -2,6 +2,7 @@ import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-js.css';
 
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
+import 'bpmn-js-token-simulation/assets/css/bpmn-js-token-simulation.css';
 
 import './style.css';
 import './css/visfault.css';
@@ -9,6 +10,8 @@ import './css/visfault.css';
 import $ from 'jquery';
 
 import BpmnModeler from 'bpmn-js/lib/Modeler';
+import TokenSimulationModule from 'bpmn-js-token-simulation';
+import TokenSimulationSupportModule from 'bpmn-js-token-simulation';
 
 import ModelExtractor from './modules/extractor.mjs';
 import { SoundnessVerifier } from "./modules/soundness.mjs";
@@ -18,7 +21,7 @@ import { Normalizer } from "./modules/normalize.mjs";
 import { Visualizer } from "./modules/visualizer.mjs";
 
 import diagramXML from './../example/arzttermin-faulty.bpmn';
-import {faultBus} from "./modules/faultbus.mjs";
+import { faultBus } from "./modules/faultbus.mjs";
 
 
 
@@ -26,16 +29,22 @@ var container = $('#js-drop-zone');
 
 var modeler = new BpmnModeler({
     container: '#js-canvas',
+    additionalModules: [
+        TokenSimulationModule,
+        TokenSimulationSupportModule
+    ]
 });
 
 let eventBus = modeler.get('eventBus');
 
+console.log(modeler);
 console.log(modeler.get('elementRegistry'));
 console.log(eventBus);
+console.log(modeler.get('toggleMode'));
 
 let analyzeSoundness = (function() {
     let vis = null;
-    return function() {
+    return async function() {
         // Initialize the visualizer
         if (vis !== null) vis.destruct();
         vis = Visualizer();

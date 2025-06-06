@@ -46,8 +46,32 @@ let asList = function (s) {
     return Object.values(s);
 };
 
+/**
+ * Makes a set out of an array.
+ * @param l The list to be represented as set.
+ * @returns {*}
+ */
 let asObject = function (l) {
     return l.reduce((o,i) => { o[i.getId] = i; return o; }, {});
-}
+};
 
-export { intersect, diff, union, asList, asObject };
+/**
+ * Checks if the given variable represents an object.
+ * @param o The possible object.
+ * @returns {boolean}
+ */
+let isObject = function (o) {
+    return typeof o === 'object';
+};
+
+/**
+ * Checks if the given set is empty.
+ * @param s The object representing the set.
+ * @returns {boolean}
+ */
+let isEmpty = function (s) {
+    return Object.keys(s).length === 0;
+};
+
+
+export { intersect, diff, union, asList, asObject, isObject, isEmpty };
