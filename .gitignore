@@ -1,0 +1,7 @@
+node_modules
+example
+index.html
+.idea
+!public/bpmninvest.mjs
+!public/bpmninvest.mjs.LICENSE.txt
+!public/index.html
