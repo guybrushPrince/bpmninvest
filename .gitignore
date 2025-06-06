@@ -1,7 +1,9 @@
-node_modules
 example
-index.html
+node_modules
+public
 .idea
+index.html
+package-lock.json
 !public/bpmninvest.mjs
 !public/bpmninvest.mjs.LICENSE.txt
 !public/index.html
