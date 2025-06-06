@@ -355,7 +355,7 @@ const SoundnessVerifier = (function () {
 
                         let fault = FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION;
                         let pathFinder = PathFinderFactory();
-                        if (sync.isDivergingEnd) {
+                        if (sync.isConvergingEnd) {
                             fault = FaultType.POTENTIAL_ENDLESS_LOOP;
                         }
                         let paths = findPathsToIntersectionPoint(split, syncPhisFine, sync, process);

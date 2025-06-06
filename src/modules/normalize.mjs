@@ -126,6 +126,7 @@ const Normalizer = (function () {
                 if (xor !== null || implicitStarts.length >= 2) {
                     and = new Gateway('n' + elementId++, null, GatewayType.AND);
                     and.setUI(implicitStarts.map((s) => s.getUI));
+                    and.setDivergingStart(true);
                     and.addElementId(flatten(implicitStarts.map((s) => s.elementIds)));
                     process.addNode(and);
                     implicitStarts.forEach(function (start) {
@@ -189,7 +190,7 @@ const Normalizer = (function () {
                 or = new Gateway('n' + elementId++, null, (withFaults ? GatewayType.OR : GatewayType.XOR));
                 or.setUI(ends.map((e) => e.getUI));
                 or.addElementId(flatten(ends.map((e) => e.elementIds)));
-                if (!withFaults) or.setDivergingEnd(true);
+                if (!withFaults) or.setConvergingEnd(true);
                 process.addNode(or);
                 ends.forEach(function (end) {
                     if (end instanceof End && asList(end.getIncoming).length >= 2) {

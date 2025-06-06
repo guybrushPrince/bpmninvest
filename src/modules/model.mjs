@@ -255,7 +255,8 @@ const GatewayType = {
 }
 class Gateway extends Node {
     #kind;
-    #divergingEnd = false;
+    #divergingStart = false;
+    #converingEnd = false;
     constructor(id, type, kind = null) {
         super(id, type);
         if (kind === null) {
@@ -272,8 +273,11 @@ class Gateway extends Node {
         this.#kind = kind;
     }
 
-    setDivergingEnd(divEnd) { this.#divergingEnd = divEnd; }
-    get isDivergingEnd() { return this.#divergingEnd; }
+    setConvergingEnd(conEnd) { this.#converingEnd = conEnd; }
+    get isConvergingEnd() { return this.#converingEnd; }
+
+    setDivergingStart(divStart) { this.#divergingStart = divStart; }
+    get isDivergingStart() { return this.#divergingStart; }
 
     get copy() {
         return new Gateway(this.getId, this.getType, this.#kind);

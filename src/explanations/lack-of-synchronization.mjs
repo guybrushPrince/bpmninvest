@@ -1,16 +1,21 @@
 import { GatewayType } from "../modules/model.mjs";
-import {asList} from "../modules/settools.mjs";
+import {asList, asObject} from "../modules/settools.mjs";
 import $ from "jquery";
 import {TokenSimulationHandling} from "../modules/simsupport.mjs";
 import {flatten} from "array-flatten";
+import {PathFinderFactory} from "../modules/pathfinder.mjs";
 
 let explanation = function (panel, information, modeler) {
 
-    let isParallelStart = false;
     let diverging = information.split;
-    let divergingIds = diverging.elementIds;
+    let isParallelStart = diverging.isDivergingStart;
     let converging = information.intersectionPoint;
-    let convergingIds = converging.elementIds;
+
+    let pathFinder = PathFinderFactory(modeler);
+    let divergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ diverging ])).concat([]);
+    divergingProcessElement = divergingProcessElement.shift();
+    let convergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ converging ])).concat([]);
+    convergingProcessElement = convergingProcessElement.shift();
 
     panel.append('<h1>Missing Synchronization leads to Unexpected Behavior</h1>');
 
@@ -22,31 +27,41 @@ let explanation = function (panel, information, modeler) {
         'diverging parallel or inclusive gateway can firstly meet in a converging exclusive gateway. In this case, ' +
         'the exclusive gateway is executed twice (once for each control flow) and all following tasks are executed ' +
         'twice as well.</p>');
+    panel.append('<p>In general, such an improper synchronization hinders a proper completion of a process model and, ' +
+        'sometimes, the option to complete - both considered as bad practice.')
 
 
     panel.append('<h2>Flaw in your process model</h2>');
 
+    let joinType = convergingProcessElement.type.substring(5);
+    let joinLink = '<a data-element-link=\'' + JSON.stringify(asList(converging.elementIds)) + '\'>' + joinType  + '</a>';
+    let joinImplicitExplicit = joinType.includes('Gateway') ? '' : 'n implicit';
+
     if (!isParallelStart) {
-        panel.append('<p>Your process model contains the ' +
-            '<a data-element-link=\'' + JSON.stringify(asList(divergingIds)) + '\'>diverging ' +
-            (diverging.getKind === GatewayType.AND ? 'parallel' : 'inclusive') + ' gateway</a> that is not ' +
-            'synchronized successfully in a ' +
-            '<a data-element-link=\'' + JSON.stringify(asList(convergingIds)) + '\'>converging exclusive ' +
-            ' gateway</a>.</p>');
+        let splitType = divergingProcessElement.type.substring(5);
+        let splitLink = '<a data-element-link=\'' + JSON.stringify(asList(diverging.elementIds)) + '\'>' + splitType  + '</a>';
+        let implicitExplicit = splitType.includes('Gateway') ? '' : 'n implicit';
+        let parallelInclusive = (diverging.getKind === GatewayType.AND ? 'parallel' : 'inclusive');
+
+        panel.append('<p>You have used a' + implicitExplicit + ' diverging ' + parallelInclusive + ' gateway, a ' +
+            splitLink + ' in your model, that is not sychronized successfully in a' + joinImplicitExplicit + ' ' +
+            'exclusive gateway, a ' + joinLink + ' in your model.</p>');
+    } else {
+        panel.append('<p>Your process model uses an implicit start event that causes concurrent control flows that are ' +
+            'not sychronized successfully in a' + joinImplicitExplicit + ' ' +
+            'exclusive gateway, a ' + joinLink + ' in your model.</p>');
     }
     panel.append('<p>Starting in the pulsating and the strong black lined elements, there are two disjoint paths to ' +
-        '<a data-element-link=\'' + JSON.stringify(asList(convergingIds)) + '\'>converging exclusive ' + ' gateway</a>. ' +
+        joinLink + '. ' +
         'Via those paths, two concurrent control flows may reach the gateway and cause undesired behavior subsequently.' +
         '</p>');
 
     panel.append('<h2>Proposals for repairment</h2>');
     panel.append('<p>If the concurrency is desired, you should think about the strong black lined paths whether they ' +
-        'are represent your process model correctly. One solution may be to converge the concurrent control flows earlier' +
+        'represent your process model correctly. One solution may be to converge the concurrent control flows earlier' +
         'in your process model.</p>')
     panel.append('<p>If your workflow management system allows for using inclusive gateways, another solution is to ' +
-        'replace the ' +
-        '<a data-element-link=\'' + JSON.stringify(asList(convergingIds)) + '\'>converging exclusive ' + ' gateway</a> ' +
-        'with a converging inclusive gateway.');
+        'replace the ' + joinLink + ' with a converging inclusive gateway.');
 
 
     panel.append('<h2>Simulation (Experimental)</h2>');
@@ -76,6 +91,11 @@ let explanation = function (panel, information, modeler) {
         '<a href="https://doi.org/10.1007/978-3-642-15618-2_19" target="_blank">Symbolic Execution of Acyclic Workflow Graphs.</a><br>' +
         'BPM 2010: 260-275' +
         '</blockquote>');
+    panel.append('<blockquote>' +
+        'Marlon Dumas, Marcello La Rosa, Jan Mendling, Hajo A. Reijers<br>' +
+        '<a href="https://doi.org/10.1007/978-3-662-56509-4" target="_blank">Fundamentals of Business Process Management.</a><br>' +
+        'Second Edition. Springer 2018, ISBN 978-3-662-56508-7, pp. 181-187.' +
+        '</blockquote>');
 
     // Token simulation
     let simInformation = information.simulation;
@@ -100,6 +120,8 @@ let explanation = function (panel, information, modeler) {
         simHandler.controlElement(pathToSplit[0]);
         $('.simulation-hint').empty();
     });
+
+    return () => { simHandler.stop(); };
 };
 
 export { explanation };

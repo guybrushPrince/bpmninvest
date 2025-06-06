@@ -239,6 +239,7 @@ const Visualizer = (function () {
         let visualizeLackOfSynchronization = function (type, elements, process) {
             let intersectionPoint = elements.intersectionPoint;
             addClass(intersectionPoint.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+            let closerAction = () => {};
             addOverlay(intersectionPoint.getUI$, type, Texts.POTENTIAL_LACK_OF_SYNCHRONIZATION, (panel) => {
                 let split = elements.split;
                 let postset = elements.postset;
@@ -257,8 +258,8 @@ const Visualizer = (function () {
                     addClass(mapModelToBPMNUI(path), VisClasses.NON_FADE, true);
                 });
 
-                lackOfSynchronizationExplanation(panel, elements, modelerInstance);
-            });
+                closerAction = lackOfSynchronizationExplanation(panel, elements, modelerInstance);
+            }, () => { closerAction(); });
         };
 
         let visualizePotentialEndlessLoop = function (type, elements, process) {

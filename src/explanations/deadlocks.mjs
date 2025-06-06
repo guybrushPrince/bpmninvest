@@ -110,7 +110,6 @@ let explanation = function (panel, information, modeler) {
     });
 
     return () => { simHandler.stop(); };
-
 };
 
 export { explanation };
