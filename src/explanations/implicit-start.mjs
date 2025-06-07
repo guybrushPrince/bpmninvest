@@ -10,7 +10,7 @@ let explanation = function (panel, information, modeler) {
     let processElement = pathFinder.mapNodeSetToBPMN(asObject(information.implicitStart)).concat([]);
 
     processElement = processElement.shift();
-    panel.append('<h1>Process Model has an Implicit start event</h1>');
+    panel.append('<h1>Process Model has an Implicit Start Event</h1>');
 
     panel.append('<h2>Explanation</h2>');
     panel.append('<p>Following the BPMN 2.0.2 specification, it is allowed that a BPMN process model may have an ' +

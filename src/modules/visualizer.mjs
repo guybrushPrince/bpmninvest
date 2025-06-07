@@ -3,6 +3,7 @@ import { faultBus, FaultType } from "./faultbus.mjs";
 import { asList, union } from "./settools.mjs";
 import { explanation as noStartExplanation } from '../explanations/no-start.mjs';
 import { explanation as noEndExplanation } from '../explanations/no-end.mjs';
+import { explanation as wrongGatewayExplanation } from "../explanations/wrong-gateway.mjs";
 import { explanation as implicitStartExplanation } from '../explanations/implicit-start.mjs';
 import { explanation as implicitEndExplanation } from '../explanations/implicit-end.mjs';
 import { explanation as loopExitNotXORExplanation } from '../explanations/loop-exit-not-xor.mjs';
@@ -37,7 +38,7 @@ const Texts = {
     NO_END: 'No explicit or implicit end event',
     IMPLICIT_START: 'Implicit start event',
     IMPLICIT_END: 'Implicit end event',
-    GATEWAY_WITHOUT_MULTIPLE_FLOWS: 'The gateway has neither multiple incoming nor multiple outgoing flows',
+    GATEWAY_WITHOUT_MULTIPLE_FLOWS: 'Wrongly structured gateway',
     LOOP_EXIT_NOT_XOR: 'Wrong loop exit',
     LOOP_ENTRY_IS_AND: 'Wrong loop entry',
     LOOP_BACK_JOIN_IS_AND: 'Possible deadlock',
@@ -160,12 +161,15 @@ const Visualizer = (function () {
             });
         };
 
-        let visualizeDefectGateway = function (type, element) {
+        let visualizeDefectGateway = function (type, information) {
+            let element = information.gateway;
             let ui = element.getUI$;
             addClass(ui, [VisClasses.VISUALIZED_LINE, VisClasses.WARNING_LINE]);
-            addOverlay(element.getUI$, type, Texts.GATEWAY_WITHOUT_MULTIPLE_FLOWS, () => {
+            addOverlay(element.getUI$, type, Texts.GATEWAY_WITHOUT_MULTIPLE_FLOWS, (panel) => {
                 fadeOut();
                 addClass(ui, VisClasses.NON_FADE, true);
+
+                wrongGatewayExplanation(panel, information, modelerInstance);
             });
         };
 

@@ -261,13 +261,13 @@ const Normalizer = (function () {
                         e.setSource(n);
                     });
                     process.addEdge(new Edge('n' + elementId++, g, n));
-                } else if (asList(g.getOutgoing).length === 1 && asList(g.getIncoming).length === 1) {
-                    if (withFaults) faultBus.addWarning(process, g, FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS);
-                    /*
-                    // Replace it with a task
-                    let t = new Task(g.getId, g.getType);
-                    t.setUI(g.getUI);
-                    process.replaceNode(g, t);*/
+                } else if (asList(g.getOutgoing).length <= 1 && asList(g.getIncoming).length <= 1 ||
+                    asList(g.getOutgoing).length >= 2 && asList(g.getIncoming).length >= 2) {
+                    if (withFaults) faultBus.addWarning(process, {
+                        gateway: g,
+                        incoming: asList(g.getIncoming).length,
+                        outgoing: asList(g.getOutgoing).length
+                    }, FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS);
                 }
             });
         };
