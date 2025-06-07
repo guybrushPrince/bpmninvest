@@ -176,15 +176,20 @@ const Visualizer = (function () {
         let visualizeLoopEntryIsAnd = function (type, elements, process) {
             let loopEntry = elements.entry;
             let loop = elements.loop;
+            let into = union(elements.into, {});
+            into[loopEntry.getId] = loopEntry;
             loop.getEdges;
             addClass(loopEntry.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+            let closerAction = () => {};
             addOverlay(loopEntry.getUI$, type, Texts.LOOP_ENTRY_IS_AND, (panel) => {
                 fadeOut();
                 addClass(mapToUI(union(loop.getNodes, loop.getEdges)), VisClasses.NON_FADE, true);
+                addClass(mapModelToBPMNUI(into), [ VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE,
+                    VisClasses.NON_FADE], VisClasses.NON_FADE);
                 addClass(loopEntry.getUI$, VisClasses.NON_FADE, true);
 
-                loopEntryIsANDExplanation(panel, elements, modelerInstance, process);
-            });
+                closerAction = loopEntryIsANDExplanation(panel, elements, modelerInstance, process);
+            }, () => { closerAction(); });
         };
 
         let visualizeLoopExitNotXor = function (type, elements, process) {

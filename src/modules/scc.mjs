@@ -136,27 +136,23 @@ let SCC = function () {
                     asList(component.getEntries).forEach(entry => {
                         if (entry instanceof Gateway && entry.getKind === GatewayType.AND) {
                             // We find a path to any exit that we force to execute.
-                            let exit = asList(component.getExits).shift();
+                            let exit = asList(intersect(component.getExits, component.getDoBody)).shift();
                             let inLoop = intersect(component.getEdges, entry.getIncoming);
                             let inLoopSel = asList(inLoop)[0];
+                            let pathFinder = PathFinderFactory();
+                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
+                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                            let pathToEntry = pathFinder.findPathFromStartToTarget(inLoopSel.getSource, process);
+                            if (pathToEntry !== null) pathToEntry = pathFinder.modelPathToBPMNPath(pathToEntry);
                             faultBus.addError(
                                 process,
                                 {
                                     entry: entry,
                                     loop: component,
+                                    into: intersect(entry.getPreset, preset),
                                     simulation: {
-                                        pathToExit: function (process) {
-                                            let pathFinder = PathFinderFactory();
-                                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
-                                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
-                                            return pathToExit;
-                                        },
-                                        pathToEntry: function (process) {
-                                            let pathFinder = PathFinderFactory();
-                                            let pathToEntry = pathFinder.findPathFromStartToTarget(inLoopSel.getSource, process);
-                                            if (pathToEntry !== null) pathToEntry = pathFinder.modelPathToBPMNPath(pathToEntry);
-                                            return pathToEntry;
-                                        },
+                                        pathToExit: pathToExit,
+                                        pathToEntry: pathToEntry,
                                         exit: exit,
                                         entry: entry
                                     }
