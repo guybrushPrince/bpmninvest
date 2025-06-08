@@ -1,11 +1,14 @@
 import { GatewayType } from "../modules/model.mjs";
 import $ from 'jquery';
-import { asList } from "../modules/settools.mjs";
+import { asList, asObject } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
+import { PathFinderFactory } from "../modules/pathfinder.mjs";
 
 let explanation = function (panel, information, modeler, process) {
     let loopExit = information.exit;
-    let loopExitIds = loopExit.elementIds;
+    let pathFinder = PathFinderFactory(modeler);
+    let exitProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ loopExit ])).concat([]);
+    exitProcessElement = exitProcessElement.shift();
 
     panel.append('<h1>Loop has a Loop Exit that is not an Exclusive Gateway</h1>');
 
@@ -18,13 +21,20 @@ let explanation = function (panel, information, modeler, process) {
         '<em>parallel</em> gateways lead to unexpected behavior in process models. ' +
         'Both kinds of gateways (may) result in concurrent control flows. At least one of those control flows ' +
         'will execute nodes outside the loop. By the definition of a loop, control flows out of a loop cannot turn ' +
-        'back. As a result, it is not possible to synchronize the concurrent control flows successfully.</p>')
+        'back. As a result, it is not possible to synchronize the concurrent control flows successfully. The ' +
+        '<em>option to complete</em> and a <em>proper completion</em> are uncertain as well as a the absence of ' +
+        'deadlocks.</p>');
+
+
+    let type = exitProcessElement.type.substring(5);
+    let exitLink = '<a data-element-link=\'' + JSON.stringify(asList(loopExit.elementIds)) + '\'>' + type  + '</a>';
+    let exitImplicitExplicit = type.includes('Gateway') ? '' : 'n implicit';
+    let inclusiveParallel = loopExit.getKind === GatewayType.AND ? 'parallel' : 'inclusive';
 
     panel.append('<h2>Flaw in your process model</h2>');
     panel.append('<p>The loop being visualized by strong lined elements in the editor has a <em>loop exit</em> as ' +
-        '<a data-element-link=\'' + JSON.stringify(asList(loopExitIds)) + '\'>converging ' +
-        (loopExit.getKind === GatewayType.AND ? 'parallel' : 'inclusive') +
-        ' gateway</a>.</p>');
+        'a' + exitImplicitExplicit + ' ' + inclusiveParallel + ' gateway being ' + exitLink + ' in your process ' +
+        'model.</p>');
     panel.append('<p>The pulsating lines illustrate the flows that are going out of the loop. ' +
         'Since the loop exit may produce parallel control flows, the pulsating flows ' +
         'may get control flows in each iteration of the loop. These parallel control flows cannot be successfully ' +
@@ -66,13 +76,18 @@ let explanation = function (panel, information, modeler, process) {
         '<a href="https://doi.org/10.1016/j.datak.2014.11.003" target="_blank">Stepwise structural verification of cyclic workflow models with acyclic decomposition and reduction of loops.</a><br>' +
         'Data Knowl. Eng. 95: 39-65 (2015)' +
         '</blockquote>');
+    panel.append('<blockquote>' +
+        'Marlon Dumas, Marcello La Rosa, Jan Mendling, Hajo A. Reijers<br>' +
+        '<a href="https://doi.org/10.1007/978-3-662-56509-4" target="_blank">Fundamentals of Business Process Management.</a><br>' +
+        'Second Edition. Springer 2018, ISBN 978-3-662-56508-7, pp. 181-187.' +
+        '</blockquote>');
 
 
     // Token simulation
     let simInformation = information.simulation;
 
     let exit = simInformation.exit;
-    let pathToExit = simInformation.pathToExit(process);
+    let pathToExit = simInformation.pathToExit;
 
     let simHandler = TokenSimulationHandling(modeler);
     simHandler.start();
@@ -80,7 +95,8 @@ let explanation = function (panel, information, modeler, process) {
     simHandler.setDecisions(pathToExit);
 
     simHandler.pauseIfExited(exit, (node) => {
-        message.append('<p>Starting from this situation, the token on the outgoing flow of the loop can never get back into the loop.</p>');
+        message.append('<p>Starting from this situation, the token on the outgoing flow of the loop can never get back ' +
+            'into the loop.</p>');
     });
     if (exit.getKind === GatewayType.OR) {
         asList(exit.getOutgoing).forEach(f => simHandler.setDecision(exit, f));
@@ -91,6 +107,7 @@ let explanation = function (panel, information, modeler, process) {
         $('.simulation-hint').empty();
     });
 
+    return () => { simHandler.stop(); };
 };
 
 export { explanation };

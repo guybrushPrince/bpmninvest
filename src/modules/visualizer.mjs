@@ -195,10 +195,11 @@ const Visualizer = (function () {
         let visualizeLoopExitNotXor = function (type, elements, process) {
             let loopExit = elements.exit;
             let loop = elements.loop;
-            let out = elements.out;
+            let out = union(elements.out, {});
             out[loopExit.getId] = loopExit;
             loop.getEdges;
             addClass(loopExit.getUI$, [ VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE ]);
+            let closerAction = () => {};
             addOverlay(loopExit.getUI$, type, Texts.LOOP_EXIT_NOT_XOR, (panel) => {
                 fadeOut();
 
@@ -207,8 +208,8 @@ const Visualizer = (function () {
                     VisClasses.NON_FADE], VisClasses.NON_FADE);
                 addClass(loopExit.getUI$, VisClasses.NON_FADE, true);
 
-                loopExitNotXORExplanation(panel, elements, modelerInstance, process);
-            });
+                closerAction = loopExitNotXORExplanation(panel, elements, modelerInstance, process);
+            }, () => { closerAction(); });
         };
 
         let visualizeBackJoinIsAnd = function (type, elements) {
@@ -276,6 +277,7 @@ const Visualizer = (function () {
             let split = elements.split;
             let postset = elements.postset;
             addClass(split.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+            let closerAction = () => {};
             addOverlay(split.getUI$, type, Texts.POTENTIAL_ENDLESS_LOOP, (panel) => {
                 fadeOut();
                 let causeUI = intersectionPoint.getUI$;
@@ -287,8 +289,8 @@ const Visualizer = (function () {
                 addClass(split.getUI$, VisClasses.NON_FADE, true);
                 addClass(mapToUI(union(process.getNodes, process.getEdges)), VisClasses.NON_FADE, true);
 
-                endlessLoopExplanation(panel, elements, modelerInstance);
-            });
+                closerAction = endlessLoopExplanation(panel, elements, modelerInstance);
+            }, () => { closerAction(); });
         };
 
         let addOverlay = function (ui, type, text, detailAction = () => {}, detailClose = () => {}, show = false) {

@@ -208,7 +208,9 @@ class Node extends UIModel {
     setRepaired(repaired) { this.#repaired = repaired; }
 
     get copy() {
-        return new Node(this.getId, this.getType);
+        let n = new Node(this.getId, this.getType);
+        n.addElementId(this.elementIds);
+        return n;
     }
 
     asDot() {
@@ -218,7 +220,9 @@ class Node extends UIModel {
 
 class Task extends Node {
     get copy() {
-        return new Task(this.getId, this.getType);
+        let t = new Task(this.getId, this.getType);
+        t.addElementId(this.elementIds);
+        return t;
     }
 }
 class VirtualTask extends Node {
@@ -226,7 +230,9 @@ class VirtualTask extends Node {
         super(id, 'VirtualTask');
     }
     get copy() {
-        return new VirtualTask(this.getId);
+        let vT = new VirtualTask(this.getId);
+        vT.addElementId(this.elementIds);
+        return vT;
     }
 
     asDot() {
@@ -280,7 +286,9 @@ class Gateway extends Node {
     get isDivergingStart() { return this.#divergingStart; }
 
     get copy() {
-        return new Gateway(this.getId, this.getType, this.#kind);
+        let g = new Gateway(this.getId, this.getType, this.#kind);
+        g.addElementId(this.elementIds);
+        return g;
     }
 
     asDot() {
@@ -323,6 +331,7 @@ class Start extends Node {
     get copy() {
         let start = new Start(this.getId, this.getType);
         start.#event = this.#event;
+        start.addElementId(this.elementIds);
         return start;
     }
 
@@ -333,7 +342,9 @@ class Start extends Node {
 class End extends Node {
 
     get copy() {
-        return new End(this.getId, this.getType);
+        let end = new End(this.getId, this.getType);
+        end.addElementId(this.elementIds);
+        return end;
     }
 
     asDot() {
@@ -482,6 +493,17 @@ class Loop extends UIModel {
         });
 
         return doBody;
+    }
+
+    copy() {
+        let l = new Loop;
+        l.#nodes = union(this.getNodes, {});
+        l.#entries = union(this.getEntries, {});
+        l.#exits = union(this.getExits, {});
+        l.#edges = union(this.getEdges, {});
+        l.#doBody = union(this.getDoBody, {});
+        l.#process = this.getProcess;
+        return l;
     }
 }
 

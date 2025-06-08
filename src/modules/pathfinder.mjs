@@ -97,15 +97,23 @@ let PathFinderFactory = function(modeler = null) {
             let loopEntryGateways = {};
             let loopExitGateways = {};
             let ordinary = {};
-            asList(set).forEach(n => {
-                if (n instanceof LoopTask) loopTasks[n.getId] = n;
-                else if (n instanceof LoopEntryGateway) loopEntryGateways[n.getId] = n;
-                else if (n instanceof LoopExitGateway) loopExitGateways[n.getId] = n;
-                else ordinary[n.getId] = n;
-            });
+            let list = asList(set);
+            if (list.length > 1) {
+                list.forEach(n => {
+                    if (n instanceof LoopTask) loopTasks[n.getId] = n;
+                    else if (n instanceof LoopEntryGateway) loopEntryGateways[n.getId] = n;
+                    else if (n instanceof LoopExitGateway) loopExitGateways[n.getId] = n;
+                    else ordinary[n.getId] = n;
+                });
+            } else if (list.length === 1) {
+                let n = list[0];
+                ordinary[n.getId] = n;
+            } else return [];
+            console.log('ordinaries', ordinary);
             // Collect the ordinaries.
             let bpmn = flatten(asList(ordinary).reduce((bpmn, o) => {
                 if (o.elementIds !== undefined && o.elementIds !== null) {
+                    console.log('Push', o, o.elementIds);
                     bpmn.push(asList(o.elementIds));
                 }
                 return bpmn;
@@ -159,6 +167,7 @@ let PathFinderFactory = function(modeler = null) {
             // Make it unique.
             bpmn.push(bpmnExits);
             bpmn.push(bpmnEntries);
+            console.log('Intermediate', bpmn);
             bpmn = flatten(bpmn);
             bpmn = [...new Set(bpmn)];
             // Map to elements

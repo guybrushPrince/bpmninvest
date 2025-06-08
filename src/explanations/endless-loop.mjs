@@ -1,15 +1,22 @@
 import { GatewayType } from "../modules/model.mjs";
-import { asList } from "../modules/settools.mjs";
+import {asList, asObject} from "../modules/settools.mjs";
 import $ from "jquery";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
+import {PathFinderFactory} from "../modules/pathfinder.mjs";
 
 let explanation = function (panel, information, modeler) {
 
-    let isParallelStart = false;
     let diverging = information.split;
-    let divergingIds = diverging.elementIds;
+    let isParallelStart = diverging.isDivergingStart;
     let converging = information.intersectionPoint;
-    let convergingIds = converging.elementIds;
+
+    let pathFinder = PathFinderFactory(modeler);
+    let divergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ diverging ])).concat([]);
+    console.log('divergings', divergingProcessElement.concat([]));
+    divergingProcessElement = divergingProcessElement.shift();
+    let convergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ converging ])).concat([]);
+    convergingProcessElement = convergingProcessElement.shift();
+    console.log('Conv-Diver', converging, diverging, convergingProcessElement, divergingProcessElement);
 
     panel.append('<h1>Endless Loop because of Missing Synchronization</h1>');
 
@@ -30,29 +37,36 @@ let explanation = function (panel, information, modeler) {
 
 
     panel.append('<h2>Flaw in your process model</h2>');
-    panel.append('<p>Your process model contains the ' +
-        '<a data-element-link=\'' + JSON.stringify(asList(divergingIds)) + '\'>diverging ' +
-        (diverging.getKind === GatewayType.AND ? 'parallel' : 'inclusive') + ' gateway</a> that is not ' +
-        'synchronized successfully in the loop, which is highlighted by strong black lines in your process model.</p>');
-    panel.append('<p>The pulsating outgoing flows of the gateway illustrate the starting points of concurrent ' +
-        'control flows, which have ' +
-        '</p>')
+    let joinType = convergingProcessElement.type.substring(5);
+    let joinLink = '<a data-element-link=\'' + JSON.stringify(asList(converging.elementIds)) + '\'>' + joinType  + '</a>';
+    let joinImplicitExplicit = joinType.includes('Gateway') ? '' : 'n implicit';
 
-    // TODO:
+    if (!isParallelStart) {
+        let splitType = divergingProcessElement.type.substring(5);
+        let splitLink = '<a data-element-link=\'' + JSON.stringify(asList(diverging.elementIds)) + '\'>' + splitType  + '</a>';
+        let implicitExplicit = splitType.includes('Gateway') ? '' : 'n implicit';
+        let parallelInclusive = (diverging.getKind === GatewayType.AND ? 'parallel' : 'inclusive');
+
+        panel.append('<p>You have used a' + implicitExplicit + ' diverging ' + parallelInclusive + ' gateway, a ' +
+            splitLink + ' in your model, that is not sychronized successfully in the loop, which is highlighted by ' +
+            'strong black lines in your process model.</p>');
+    } else {
+        panel.append('<p>Your process model uses an implicit start event that causes concurrent control flows that are ' +
+            'not sychronized successfully in the loop, which is highlighted by ' +
+            'strong black lines in your process model.</p>');
+    }
+    panel.append('<p>The pulsating outgoing flows of the gateway illustrate the starting points of concurrent ' +
+        'control flows, which do not have a converging gateway before the loop exit, which is a' + joinImplicitExplicit
+        + ' ' + joinLink + ' in your process model.</p>');
 
     panel.append('<p>Starting in the pulsating and the strong black lined elements, there are two disjoint paths to ' +
-        '<a data-element-link=\'' + JSON.stringify(asList(convergingIds)) + '\'>converging exclusive ' + ' gateway</a>. ' +
-        'Via those paths, two concurrent control flows may reach the gateway and cause undesired behavior subsequently.' +
-        '</p>');
+        joinLink + '. ' + 'Via those paths, two concurrent control flows may reach the loop exit and cause undesired ' +
+        'behavior subsequently.' + '</p>');
+
 
     panel.append('<h2>Proposals for repairment</h2>');
-    panel.append('<p>If the concurrency is desired, you should think about the strong black lined paths whether they ' +
-        'are represent your process model correctly. One solution may be to converge the concurrent control flows earlier' +
-        'in your process model.</p>');
-    panel.append('<p>If your workflow management system allows for using inclusive gateways, another solution is to ' +
-        'replace the ' +
-        '<a data-element-link=\'' + JSON.stringify(asList(convergingIds)) + '\'>converging exclusive ' + ' gateway</a> ' +
-        'with a converging inclusive gateway.');
+    panel.append('<p>If the concurrency is desired, please converge them before reaching the loop exit ' +
+        joinLink + '.</p>');
 
 
     panel.append('<h2>Simulation (Experimental)</h2>');
@@ -77,16 +91,17 @@ let explanation = function (panel, information, modeler) {
         '<a href="https://doi.org/10.1016/j.is.2024.102476" target="_blank">Soundness unknotted: An efficient soundness checking algorithm for arbitrary cyclic process models by loosening loops.</a><br>' +
         'Inf. Syst. 128: 102476 (2025)' +
         '</blockquote>');
-    /*panel.append('<blockquote>' +
+    panel.append('<blockquote>' +
         'Thomas M. Prinz, Wolfram Amme:<br>' +
         '<a href="https://doi.org/10.7250/csimq.2021-27.01" target="_blank">Control-Flow-Based Methods to Support the Development of Sound Workflows.</a><br>' +
         'Complex Syst. Informatics Model. Q. 27: 1-44 (2021)' +
         '</blockquote>');
     panel.append('<blockquote>' +
-        'C&#233;dric Favre, Hagen V&ouml;lzer:<br>' +
-        '<a href="https://doi.org/10.1007/978-3-642-15618-2_19" target="_blank">Symbolic Execution of Acyclic Workflow Graphs.</a><br>' +
-        'BPM 2010: 260-275' +
-        '</blockquote>');*/
+        'Marlon Dumas, Marcello La Rosa, Jan Mendling, Hajo A. Reijers<br>' +
+        '<a href="https://doi.org/10.1007/978-3-662-56509-4" target="_blank">Fundamentals of Business Process Management.</a><br>' +
+        'Second Edition. Springer 2018, ISBN 978-3-662-56508-7, pp. 181-187.' +
+        '</blockquote>');
+
 
     // Token simulation
     let simInformation = information.simulation;
@@ -111,6 +126,8 @@ let explanation = function (panel, information, modeler) {
         simHandler.controlElement(pathToSplit[0]);
         $('.simulation-hint').empty();
     });
+
+    return () => { simHandler.stop(); };
 };
 
 export { explanation };

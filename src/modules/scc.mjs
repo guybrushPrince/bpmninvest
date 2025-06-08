@@ -113,19 +113,18 @@ let SCC = function () {
                     // loop entries must be "XOR" (or "OR") and loop exits must be "XOR"
                     asList(component.getExits).forEach(exit => {
                         if (exit instanceof Gateway && exit.getKind !== GatewayType.XOR) {
+                            let pathFinder = PathFinderFactory();
+                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
+                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                            else pathToExit = [];
                             faultBus.addError(
                                 process,
                                 {
                                     exit: exit,
-                                    loop: component,
+                                    loop: component.copy(),
                                     out: intersect(exit.getPostset, postset),
                                     simulation: {
-                                        pathToExit: function (process) {
-                                            let pathFinder = PathFinderFactory();
-                                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
-                                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
-                                            return pathToExit;
-                                        },
+                                        pathToExit: pathToExit,
                                         exit: exit
                                     }
                                 },
@@ -142,13 +141,15 @@ let SCC = function () {
                             let pathFinder = PathFinderFactory();
                             let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
                             if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                            else pathToExit = [];
                             let pathToEntry = pathFinder.findPathFromStartToTarget(inLoopSel.getSource, process);
                             if (pathToEntry !== null) pathToEntry = pathFinder.modelPathToBPMNPath(pathToEntry);
+                            else pathToEntry = [];
                             faultBus.addError(
                                 process,
                                 {
                                     entry: entry,
-                                    loop: component,
+                                    loop: component.copy(),
                                     into: intersect(entry.getPreset, preset),
                                     simulation: {
                                         pathToExit: pathToExit,
