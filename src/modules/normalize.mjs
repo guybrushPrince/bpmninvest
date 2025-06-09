@@ -130,13 +130,19 @@ const Normalizer = (function () {
                     and.addElementId(flatten(implicitStarts.map((s) => s.elementIds)));
                     process.addNode(and);
                     implicitStarts.forEach(function (start) {
-                        process.addEdge(new Edge('n' + elementId++, and, start));
+                        let edge = new Edge('n' + elementId++, and, start);
+                        edge.setUI(start.getUI);
+                        edge.addElementId(start.elementIds);
+                        process.addEdge(edge);
                     });
                     if (xor !== null) {
                         and.getUI.push(xor.getUI);
                         and.getUI.flat();
                         and.addElementId(xor.elementIds);
-                        process.addEdge(new Edge('n' + elementId++, and, xor));
+                        let edge = new Edge('n' + elementId++, and, xor);
+                        edge.setUI(and.getUI);
+                        edge.addElementId(and.elementIds);
+                        process.addEdge(edge);
                     }
                 } else {
                     and = implicitStarts[0];
@@ -147,7 +153,10 @@ const Normalizer = (function () {
                 start.setUI(and.getUI);
                 start.addElementId(and.elementIds);
                 process.addNode(start);
-                process.addEdge(new Edge('n' + elementId++, start, and));
+                let edge = new Edge('n' + elementId++, start, and);
+                edge.setUI(start.getUI);
+                edge.addElementId(start.elementIds);
+                process.addEdge(edge);
             }
 
             // Replace each explicit start with multiple outgoing flows with an AND gateway.
@@ -203,6 +212,7 @@ const Normalizer = (function () {
                     }
                     let sf = new Edge('n' + elementId++, end, or);
                     sf.addElementId(union(end.elementIds, or.elementIds));
+                    sf.setUI(end.getUI);
                     process.addEdge(sf);
                 });
             }
@@ -223,13 +233,19 @@ const Normalizer = (function () {
                 end.setUI(or.getUI);
                 end.addElementId(or.elementIds);
                 process.addNode(end);
-                process.addEdge(new Edge('n' + elementId++, or, end));
+                let edge = new Edge('n' + elementId++, or, end);
+                edge.setUI(end.getUI);
+                edge.addElementId(end.elementIds);
+                process.addEdge(edge);
             } else if (ends.length === 1 && implicitEnds.length === 1) {
                 let end = new End('n' + elementId++, 'EndEvent');
                 end.setUI(ends[0].getUI);
                 end.addElementId(ends[0].elementIds);
                 process.addNode(end);
-                process.addEdge(new Edge('n' + elementId++, ends[0], end));
+                let edge = new Edge('n' + elementId++, ends[0], end);
+                edge.setUI(end.getUI);
+                edge.addElementId(end.elementIds);
+                process.addEdge(edge);
             }
         };
 
@@ -260,7 +276,10 @@ const Normalizer = (function () {
                     asList(g.getOutgoing).forEach(function (e) {
                         e.setSource(n);
                     });
-                    process.addEdge(new Edge('n' + elementId++, g, n));
+                    let edge = new Edge('n' + elementId++, g, n);
+                    edge.setUI(g.getUI);
+                    edge.addElementId(g.elementIds);
+                    process.addEdge(edge);
                 } else if (asList(g.getOutgoing).length <= 1 && asList(g.getIncoming).length <= 1 ||
                     asList(g.getOutgoing).length >= 2 && asList(g.getIncoming).length >= 2) {
                     if (withFaults) faultBus.addWarning(process, {
@@ -287,7 +306,10 @@ const Normalizer = (function () {
                     asList(t.getIncoming).forEach(function (e) {
                         e.setTarget(g);
                     });
-                    process.addEdge(new Edge('n' + elementId++, g, t));
+                    let edge = new Edge('n' + elementId++, g, t);
+                    edge.setUI(g.getUI);
+                    edge.addElementId(g.elementIds);
+                    process.addEdge(edge);
                 }
                 // Following p. 151 of the BPMN spec, an activity with multiple outgoing flows
                 // will place a token on all its outgoing flows. We model this explicitly with an
@@ -301,7 +323,10 @@ const Normalizer = (function () {
                     asList(t.getOutgoing).forEach(function (e) {
                         e.setSource(g);
                     });
-                    process.addEdge(new Edge('n' + elementId++, t, g));
+                    let edge = new Edge('n' + elementId++, t, g);
+                    edge.setUI(t.getUI);
+                    edge.addElementId(t.elementIds);
+                    process.addEdge(edge);
                 }
             });
         };
@@ -318,7 +343,10 @@ const Normalizer = (function () {
                         t.addElementId(e.elementIds);
                         process.addNode(t);
                         e.setTarget(t);
-                        process.addEdge(new Edge('n' + elementId++, t, s));
+                        let edge = new Edge('n' + elementId++, t, s);
+                        edge.setUI(e.getUI);
+                        edge.addElementId(e.elementIds);
+                        process.addEdge(edge);
                     }
                 });
             });

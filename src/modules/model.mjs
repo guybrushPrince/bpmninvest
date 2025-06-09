@@ -3,6 +3,7 @@ import { FaultType, faultBus } from "./faultbus.mjs";
 import {asList, asObject, diff, intersect, union} from "./settools.mjs";
 import { SCC } from "./scc.mjs";
 import {flatten} from "array-flatten";
+import {PathFinderFactory} from "./pathfinder.mjs";
 
 class UIModel {
     #id;
@@ -210,6 +211,7 @@ class Node extends UIModel {
     get copy() {
         let n = new Node(this.getId, this.getType);
         n.addElementId(this.elementIds);
+        n.setUI(this.getUI);
         return n;
     }
 
@@ -222,6 +224,7 @@ class Task extends Node {
     get copy() {
         let t = new Task(this.getId, this.getType);
         t.addElementId(this.elementIds);
+        t.setUI(this.getUI);
         return t;
     }
 }
@@ -232,6 +235,7 @@ class VirtualTask extends Node {
     get copy() {
         let vT = new VirtualTask(this.getId);
         vT.addElementId(this.elementIds);
+        vT.setUI(this.getUI);
         return vT;
     }
 
@@ -288,6 +292,7 @@ class Gateway extends Node {
     get copy() {
         let g = new Gateway(this.getId, this.getType, this.#kind);
         g.addElementId(this.elementIds);
+        g.setUI(this.getUI);
         return g;
     }
 
@@ -332,6 +337,7 @@ class Start extends Node {
         let start = new Start(this.getId, this.getType);
         start.#event = this.#event;
         start.addElementId(this.elementIds);
+        start.setUI(this.getUI);
         return start;
     }
 
@@ -344,6 +350,7 @@ class End extends Node {
     get copy() {
         let end = new End(this.getId, this.getType);
         end.addElementId(this.elementIds);
+        end.setUI(this.getUI);
         return end;
     }
 
@@ -477,13 +484,26 @@ class Loop extends UIModel {
                     let notInDoBody = asList(node.getPreset).filter(p => !(p.getId in doBody));
                     let isBackJoin = notInDoBody.length >= 1;
                     if (isBackJoin && node.getKind === GatewayType.AND) {
+                        notInDoBody = asObject(notInDoBody);
+                        let notInEdgesDoBody = asList(node.getIncoming).filter(i => i.getSource.getId in notInDoBody);
+                        notInEdgesDoBody = asObject(notInEdgesDoBody);
+                        let notInDoBodySel = asList(notInEdgesDoBody)[0];
+                        let pathFinder = PathFinderFactory();
+                        let pathToNotIn = pathFinder.findPathFromStartToTarget(notInDoBodySel.getSource, this.#process);
+                        if (pathToNotIn !== null) pathToNotIn = pathFinder.modelPathToBPMNPath(pathToNotIn);
+                        else pathToNotIn = [];
+
                         faultBus.addError(
                             this.#process,
                             {
                                 backJoin: node,
-                                loop: this,
-                                paths: blowUpWithEdges(blowUpWithLoopNodes(doBody)),
-                                flaws: asObject(notInDoBody)
+                                loop: this.copy(),
+                                doBody: union(doBody, {}),
+                                flaws: notInEdgesDoBody,
+                                simulation: {
+                                    pathToNotIn: pathToNotIn,
+                                    backJoin: node
+                                }
                             },
                             FaultType.LOOP_BACK_JOIN_IS_AND
                         );

@@ -11,6 +11,7 @@ import { explanation as loopEntryIsANDExplanation } from "../explanations/loop-e
 import { explanation as deadlockExplanation } from '../explanations/deadlocks.mjs';
 import { explanation as lackOfSynchronizationExplanation } from '../explanations/lack-of-synchronization.mjs';
 import { explanation as endlessLoopExplanation } from '../explanations/endless-loop.mjs';
+import { explanation as backJoinExplanation } from '../explanations/back-join-is-and.mjs';
 import { PathFinderFactory } from "./pathfinder.mjs";
 import { flatten } from "array-flatten";
 
@@ -99,7 +100,7 @@ const Visualizer = (function () {
                     visualizeLoopEntryIsAnd(type, elements, process);
                 } break;
                 case FaultType.LOOP_BACK_JOIN_IS_AND: {
-                    visualizeBackJoinIsAnd(type, elements);
+                    visualizeBackJoinIsAnd(type, elements, process);
                 } break;
                 case FaultType.POTENTIAL_DEADLOCK: {
                     visualizeDeadlock(type, elements);
@@ -212,17 +213,19 @@ const Visualizer = (function () {
             }, () => { closerAction(); });
         };
 
-        let visualizeBackJoinIsAnd = function (type, elements) {
+        let visualizeBackJoinIsAnd = function (type, elements, process) {
             let backJoin = elements.backJoin;
             addClass(backJoin.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
-            addOverlay(backJoin.getUI$, type, Texts.LOOP_BACK_JOIN_IS_AND, () => {
+            let closerAction = () => {};
+            addOverlay(backJoin.getUI$, type, Texts.LOOP_BACK_JOIN_IS_AND, (panel) => {
                 fadeOut();
-                let flawsUI = mapToUI(elements.flaws);
+                let flawsUI = mapModelToBPMNUI(elements.flaws);
                 addClass(flawsUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
                     VisClasses.NON_FADE);
-                let ui = mapToUI(elements.paths);
-                addClass(ui, VisClasses.NON_FADE, true);
-            });
+                addClass(mapModelToBPMNUI(elements.doBody), VisClasses.NON_FADE, true);
+
+                closerAction = backJoinExplanation(panel, elements, modelerInstance);
+            }, () => { closerAction(); });
         };
 
         let visualizeDeadlock = function (type, elements) {
@@ -341,6 +344,7 @@ const Visualizer = (function () {
                     let sel = link.map(l => '[data-element-id="' + l + '"]').join(',');
                     console.log(sel);
                     $(sel).addClass(VisClasses.HIGHLIGHT);
+                    console.log($(sel));
                 }
             }).on('mouseout', function () {
                 let link = $(this).data('element-link');
