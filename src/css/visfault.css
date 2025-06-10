@@ -1,0 +1,183 @@
+@keyframes pulse {
+    from, to {
+        --stroke-color: var(--dark-trans);
+    }
+    50% {
+        --stroke-color: var(--error-color);
+    }
+}
+
+:root {
+    --info-color: rgba(50, 100, 200, 0.7);
+    --warning-color: rgb(241, 227, 93, 0.7);
+    --error-color: rgba(205, 50, 50, 0.7);
+    --hint-color: rgb(255, 244, 158, 1.0);
+    --dark-trans: rgb(0, 0, 0, 0.3);
+
+    --bpmn-stroke-color: rgb(34, 36, 42, 1.0);
+
+    --light-font: rgba(250, 250, 250, 1.0);
+    --dark-font: rgba(5, 5, 5, 1.0);
+    --note-width: 150px;
+    --note-opener-width: 30px;
+}
+.note {
+    background-color: var(--note-background);
+    color: var(--note-font-color);
+    border-radius: 5px calc(var(--note-opener-width) / 2) calc(var(--note-opener-width) / 2) 5px;
+    font-family: Arial, serif;
+    font-size: 12px;
+    padding: 0 0 0 10px;
+    min-height: 16px;
+    min-width: var(--note-width);
+    width: var(--note-width);
+    text-align: left;
+    display: none;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+    align-items: center;
+}
+.note > div:first-child {
+    width: calc(var(--note-width) - var(--note-opener-width));
+}
+.djs-overlays.hover .note, .djs-overlays.selected .note, .djs-overlays .note.show {
+    display: flex;
+}
+.djs-overlays .err-con {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.d-opener {
+    background-color: var(--dark-trans);
+    color: var(--light-font);
+    font-weight: bold;
+    border-radius: 50%;
+    padding: 5px;
+    cursor: pointer;
+    font-size: 18px;
+    text-align: center;
+    min-width: var(--note-opener-width);
+    min-height: var(--note-opener-width);
+    width: var(--note-opener-width);
+    height: var(--note-opener-width);
+    transition: 0.5s opacity;
+}
+.d-opener:hover {
+    opacity: 0.5;
+}
+
+.d-panel {
+    height: 100%;
+    position: fixed;
+    top: 0; right: 0;
+    width: 30%;
+    background: var(--hint-color);
+    color: var(--dark-font);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    padding: 20px;
+    overflow-y: auto;
+}
+.d-panel h1 {
+    margin: 0;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 3px;
+    letter-spacing: -1px;
+}
+.d-panel p {
+    padding: 5px 10px;
+    line-height: 16px;
+}
+.d-panel li {
+    list-style: auto;
+}
+.d-panel blockquote {
+    margin: 5px 15px;
+}
+.d-panel a {
+    color: var(--bpmn-stroke-color);
+}
+.d-panel a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.d-panel a[data-element-link] {
+    cursor: pointer;
+    font-weight: bolder;
+}
+.d-panel #close-panel {
+    position: fixed;
+    right: 5px;
+    top: 5px;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+}
+.d-panel .simulation-hint:empty {
+    display: none;
+}
+.d-panel .simulation-hint {
+    margin: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    background: var(--info-color);
+}
+
+.highlight {
+    --shadow: 0 0 12px var(--info-color);
+    filter: drop-shadow(var(--shadow));
+}
+.vis-line {
+    transition: all 0.5s ease-in-out;
+    --stroke-color: var(--bpmn-stroke-color);
+}
+.info-line {
+    --stroke-color: var(--info-color);
+}
+.warning-line {
+    --stroke-color: var(--warning-color);
+}
+.error-line {
+    --stroke-color: var(--error-color);
+}
+.error-pulse {
+    animation: pulse 2s infinite;
+    --stroke-color: var(--error-color);
+}
+.vis-line:not(.djs-connection) .djs-visual path {
+    stroke: var(--stroke-color) !important;
+    fill: var(--stroke-color) !important;
+}
+.vis-line.djs-connection .djs-visual path {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual rect {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual circle {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual polygon {
+    stroke: var(--stroke-color) !important;
+}
+.vis-line .djs-visual marker * {
+    fill: var(--stroke-color) !important;
+}
+.note.info {
+    --note-background: var(--info-color);
+    --note-font-color: var(--light-font);
+}
+.note.warning {
+    --note-background: var(--warning-color);
+    --note-font-color: var(--dark-font);
+}
+.note.error {
+    --note-background: var(--error-color);;
+    --note-font-color: var(--light-font);
+}
+.hint-fade:not(.non-fade) {
+    opacity: 0.2;
+}

@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Finds strongly connected components (aka loops) in a given model.
  * As methodology, the algorithm of Tarjan is used:
@@ -5,6 +6,11 @@
  * R. E. Tarjan, Depth-first search and linear graph algorithms, SIAM J. Comput. 1 (2) (1972) 146–160.
  * doi:10.1137/0201010.
  */
+import { asList, union, diff, intersect } from "./settools.mjs";
+import { BPMNModel, Loop, Gateway, GatewayType } from "./model.mjs";
+import { FaultType, faultBus } from "./faultbus.mjs";
+import {PathFinderFactory} from "./pathfinder.mjs";
+
 let SCC = function () {
 
     let loopId = 0;
@@ -40,6 +46,7 @@ let SCC = function () {
          * @returns {*[]}
          */
         this.analyze = function (process) {
+            console.log('Find SCCs', process);
             // Initialize
             asList(process.getNodes).forEach((n) => {
                 index[n.getId] = -1;
@@ -83,6 +90,7 @@ let SCC = function () {
                     current = stack.pop();
                     component.addNode(current);
                     component.getUI.push(current.getUI);
+                    component.addElementId(current.elementIds);
                     preset = union(preset, current.getPreset);
                     postset = union(postset, current.getPostset);
                 } while (current.getId !== node.getId);
@@ -95,6 +103,7 @@ let SCC = function () {
                     asList(preset).forEach(i => component.addEntries(intersect(i.getPostset, component.getNodes)));
                     asList(postset).forEach(o => component.addExits(intersect(o.getPreset, component.getNodes)));
                     component.getDoBody;
+                    component.getEdges;
                     // By
                     //
                     // Prinz, T. M., Choi, Y. & Ha, N. L. (2024).
@@ -104,18 +113,51 @@ let SCC = function () {
                     // loop entries must be "XOR" (or "OR") and loop exits must be "XOR"
                     asList(component.getExits).forEach(exit => {
                         if (exit instanceof Gateway && exit.getKind !== GatewayType.XOR) {
+                            let pathFinder = PathFinderFactory();
+                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
+                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                            else pathToExit = [];
                             faultBus.addError(
                                 process,
-                                { exit: exit, loop: component},
+                                {
+                                    exit: exit,
+                                    loop: component.copy(),
+                                    out: intersect(exit.getPostset, postset),
+                                    simulation: {
+                                        pathToExit: pathToExit,
+                                        exit: exit
+                                    }
+                                },
                                 FaultType.LOOP_EXIT_NOT_XOR
                             );
                         }
                     });
                     asList(component.getEntries).forEach(entry => {
                         if (entry instanceof Gateway && entry.getKind === GatewayType.AND) {
+                            // We find a path to any exit that we force to execute.
+                            let exit = asList(intersect(component.getExits, component.getDoBody)).shift();
+                            let inLoop = intersect(component.getEdges, entry.getIncoming);
+                            let inLoopSel = asList(inLoop)[0];
+                            let pathFinder = PathFinderFactory();
+                            let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
+                            if (pathToExit !== null) pathToExit = pathFinder.modelPathToBPMNPath(pathToExit);
+                            else pathToExit = [];
+                            let pathToEntry = pathFinder.findPathFromStartToTarget(inLoopSel.getSource, process);
+                            if (pathToEntry !== null) pathToEntry = pathFinder.modelPathToBPMNPath(pathToEntry);
+                            else pathToEntry = [];
                             faultBus.addError(
                                 process,
-                                { entry: entry, loop: component},
+                                {
+                                    entry: entry,
+                                    loop: component.copy(),
+                                    into: intersect(entry.getPreset, preset),
+                                    simulation: {
+                                        pathToExit: pathToExit,
+                                        pathToEntry: pathToEntry,
+                                        exit: exit,
+                                        entry: entry
+                                    }
+                                },
                                 FaultType.LOOP_ENTRY_IS_AND
                             );
                         }
@@ -129,3 +171,5 @@ let SCC = function () {
 
     return new SCCFactory();
 };
+
+export { SCC };

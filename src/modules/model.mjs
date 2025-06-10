@@ -1,6 +1,14 @@
+import $ from 'jquery';
+import { FaultType, faultBus } from "./faultbus.mjs";
+import {asList, asObject, diff, intersect, union} from "./settools.mjs";
+import { SCC } from "./scc.mjs";
+import {flatten} from "array-flatten";
+import {PathFinderFactory} from "./pathfinder.mjs";
+
 class UIModel {
     #id;
     #ui;
+    #elementIds = {};
     constructor(id) {
         this.#id = id;
         this.#ui = $('[data-element-id="' + id + '"]');
@@ -11,8 +19,25 @@ class UIModel {
     get getUI() {
         return this.#ui;
     }
+    get getUI$() {
+        let ui = this.#ui;
+        return $(ui).uniqueSort();
+    }
     setUI(ui) {
         this.#ui = ui;
+    }
+    addElementId(id) {
+        if (typeof id === 'string') {
+            this.#elementIds[id] = id;
+            return;
+        }
+        if (Array.isArray(id)) {
+            id = asObject(flatten(id.map(i => asList(i))));
+        }
+        this.#elementIds = union(this.#elementIds, id);
+    }
+    get elementIds() {
+        return this.#elementIds;
     }
 }
 class BPMNModel extends UIModel {
@@ -53,6 +78,7 @@ class Process extends UIModel {
     #ends = null;
 
     #loops = null;
+    #super = null;
 
     get getNodes() {
         return this.#nodes;
@@ -103,6 +129,11 @@ class Process extends UIModel {
         this.#loops = loops;
     }
 
+    setSuper(process) {
+        this.#super = process;
+    }
+    get getSuper() { return this.#super; }
+
 
     resetInOut() {
         asList(this.#nodes).forEach(function (node) {
@@ -130,6 +161,14 @@ class Process extends UIModel {
         c += '}';
         return c;
     }
+
+    isValid() {
+        let nodes = this.getNodes;
+        asList(this.getEdges).forEach(e => {
+            if (!(e.getSource.getId in nodes)) console.log([e.getSource, 'missing', e, this, nodes]);
+            if (!(e.getTarget.getId in nodes)) console.log([e.getTarget, 'missing', e, this, nodes]);
+        });
+    }
 }
 class LoopProcess extends Process {}
 
@@ -139,6 +178,7 @@ class Node extends UIModel {
     #outgoing = {};
     #preset = {};
     #postset = {};
+    #repaired = false;
     constructor(id, type) {
         super(id);
         this.#type = type;
@@ -165,8 +205,14 @@ class Node extends UIModel {
     addPreset(i) { this.#preset[i.getId] = i; }
     addPostset(o) { this.#postset[o.getId] = o; }
 
+    get isRepaired() { return this.#repaired; }
+    setRepaired(repaired) { this.#repaired = repaired; }
+
     get copy() {
-        return new Node(this.getId, this.getType);
+        let n = new Node(this.getId, this.getType);
+        n.addElementId(this.elementIds);
+        n.setUI(this.getUI);
+        return n;
     }
 
     asDot() {
@@ -176,7 +222,10 @@ class Node extends UIModel {
 
 class Task extends Node {
     get copy() {
-        return new Task(this.getId, this.getType);
+        let t = new Task(this.getId, this.getType);
+        t.addElementId(this.elementIds);
+        t.setUI(this.getUI);
+        return t;
     }
 }
 class VirtualTask extends Node {
@@ -184,7 +233,10 @@ class VirtualTask extends Node {
         super(id, 'VirtualTask');
     }
     get copy() {
-        return new VirtualTask(this.getId);
+        let vT = new VirtualTask(this.getId);
+        vT.addElementId(this.elementIds);
+        vT.setUI(this.getUI);
+        return vT;
     }
 
     asDot() {
@@ -192,17 +244,20 @@ class VirtualTask extends Node {
     }
 }
 
+
 class LoopTask extends Task {
     #loop;
     constructor(id, loop) {
         super(id, 'LoopNode');
         this.#loop = loop;
     }
+    get getLoop() {
+        return this.#loop;
+    }
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=box3d,label="' + this.#loop.getId + '"];';
     }
 }
-
 const GatewayType = {
     AND: 'AND',
     XOR: 'XOR',
@@ -210,6 +265,8 @@ const GatewayType = {
 }
 class Gateway extends Node {
     #kind;
+    #divergingStart = false;
+    #converingEnd = false;
     constructor(id, type, kind = null) {
         super(id, type);
         if (kind === null) {
@@ -222,14 +279,43 @@ class Gateway extends Node {
     get getKind() {
         return this.#kind;
     }
+    setKind(kind) {
+        this.#kind = kind;
+    }
+
+    setConvergingEnd(conEnd) { this.#converingEnd = conEnd; }
+    get isConvergingEnd() { return this.#converingEnd; }
+
+    setDivergingStart(divStart) { this.#divergingStart = divStart; }
+    get isDivergingStart() { return this.#divergingStart; }
 
     get copy() {
-        return new Gateway(this.getId, this.getType, this.#kind);
+        let g = new Gateway(this.getId, this.getType, this.#kind);
+        g.addElementId(this.elementIds);
+        g.setUI(this.getUI);
+        return g;
     }
 
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=diamond,label="' + this.#kind + '"];';
     }
+}
+class LoopEntryGateway extends Gateway {
+    #entries;
+    constructor(id, entries) {
+        super(id, 'LoopEntryGateway', GatewayType.XOR);
+        this.#entries = entries;
+    }
+    get getEntries() { return this.#entries; }
+}
+
+class LoopExitGateway extends Gateway {
+    #exits;
+    constructor(id, exits) {
+        super(id, 'LoopExitGateway', GatewayType.XOR);
+        this.#exits = exits;
+    }
+    get getExits() { return this.#exits; }
 }
 const EventType = {
     MESSAGE: 'MESSAGE',
@@ -250,6 +336,8 @@ class Start extends Node {
     get copy() {
         let start = new Start(this.getId, this.getType);
         start.#event = this.#event;
+        start.addElementId(this.elementIds);
+        start.setUI(this.getUI);
         return start;
     }
 
@@ -260,7 +348,10 @@ class Start extends Node {
 class End extends Node {
 
     get copy() {
-        return new End(this.getId, this.getType);
+        let end = new End(this.getId, this.getType);
+        end.addElementId(this.elementIds);
+        end.setUI(this.getUI);
+        return end;
     }
 
     asDot() {
@@ -301,6 +392,7 @@ class Loop extends UIModel {
     #nodes = {};
     #entries = {};
     #exits = {};
+    #edges = null;
     #doBody = null;
     #process = null;
     constructor(id, process) {
@@ -316,6 +408,24 @@ class Loop extends UIModel {
     }
     get getExits() {
         return this.#exits;
+    }
+    get getEdges() {
+        if (this.#process !== null) {
+            if (this.#edges === null) {
+                this.#edges = asList(this.#process.getEdges).reduce((all, edge) => {
+                    if (edge.getSource.getId in this.#nodes &&
+                        edge.getTarget.getId in this.#nodes) {
+                        all[edge.getId] = edge;
+                    }
+                    return all;
+                }, {});
+                let ui = this.getUI;
+                if (!Array.isArray(ui)) ui = ui.toArray();
+                this.setUI([...new Set(ui.concat(asList(this.#edges).map(e => e.getUI)))]);
+            }
+            return this.#edges;
+        }
+        return null;
     }
 
     addNode(node) {
@@ -336,6 +446,7 @@ class Loop extends UIModel {
     setProcess(process) {
         this.#process = process;
     }
+    get getProcess() { return this.#process; }
 
     get getDoBody() {
         if (this.#doBody !== null) return this.#doBody;
@@ -370,11 +481,30 @@ class Loop extends UIModel {
         asList(doBody).forEach(node => {
             if (node instanceof Gateway) {
                 if (!(node.getId in this.getEntries)) {
-                    let isBackJoin = asList(node.getPreset).filter(p => !(p.getId in doBody)).length >= 1;
+                    let notInDoBody = asList(node.getPreset).filter(p => !(p.getId in doBody));
+                    let isBackJoin = notInDoBody.length >= 1;
                     if (isBackJoin && node.getKind === GatewayType.AND) {
+                        notInDoBody = asObject(notInDoBody);
+                        let notInEdgesDoBody = asList(node.getIncoming).filter(i => i.getSource.getId in notInDoBody);
+                        notInEdgesDoBody = asObject(notInEdgesDoBody);
+                        let notInDoBodySel = asList(notInEdgesDoBody)[0];
+                        let pathFinder = PathFinderFactory();
+                        let pathToNotIn = pathFinder.findPathFromStartToTarget(notInDoBodySel.getSource, this.#process);
+                        if (pathToNotIn !== null) pathToNotIn = pathFinder.modelPathToBPMNPath(pathToNotIn);
+                        else pathToNotIn = [];
+
                         faultBus.addError(
                             this.#process,
-                            { backJoin: node, loop: this },
+                            {
+                                backJoin: node,
+                                loop: this.copy(),
+                                doBody: union(doBody, {}),
+                                flaws: notInEdgesDoBody,
+                                simulation: {
+                                    pathToNotIn: pathToNotIn,
+                                    backJoin: node
+                                }
+                            },
                             FaultType.LOOP_BACK_JOIN_IS_AND
                         );
                     }
@@ -384,4 +514,44 @@ class Loop extends UIModel {
 
         return doBody;
     }
+
+    copy() {
+        let l = new Loop;
+        l.#nodes = union(this.getNodes, {});
+        l.#entries = union(this.getEntries, {});
+        l.#exits = union(this.getExits, {});
+        l.#edges = union(this.getEdges, {});
+        l.#doBody = union(this.getDoBody, {});
+        l.#process = this.getProcess;
+        return l;
+    }
 }
+
+let blowUpWithLoopNodes = function (elements) {
+    let handled = {};
+    let previous = 0;
+    do {
+        previous = handled.length;
+        asList(elements).forEach(n => {
+            if (n instanceof LoopTask && !(n.getId in handled)) {
+                elements = union(elements, n.getLoop.getNodes);
+                elements = union(elements, n.getLoop.getEdges);
+                handled[n.getId] = n;
+            }
+        });
+    } while (previous < handled.length);
+    return elements;
+};
+
+let blowUpWithEdges = function (elements) {
+    return union(elements, asObject(flatten(asList(elements).map(p => {
+        if (p instanceof Node) {
+            return asList(union(p.getIncoming, p.getOutgoing)).filter(e => {
+                return e.getTarget.getId in elements;
+            });
+        } else return [];
+    }))));
+};
+
+export { BPMNModel, Process, Node, Edge, Start, End, Gateway, GatewayType, Task, Loop, LoopEntryGateway, LoopTask,
+    LoopExitGateway, VirtualTask, EventType, MessageFlow, LoopProcess, blowUpWithLoopNodes, blowUpWithEdges }

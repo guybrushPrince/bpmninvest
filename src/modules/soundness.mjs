@@ -1,3 +1,10 @@
+"use strict";
+import { asList, union, diff, intersect, asObject } from "./settools.mjs";
+import { Start, Gateway, GatewayType, Node, blowUpWithEdges, blowUpWithLoopNodes } from "./model.mjs";
+import { FaultType, faultBus } from "./faultbus.mjs";
+import {PathFinderFactory} from "./pathfinder.mjs";
+import {flatten} from "array-flatten";
+
 /**
  * Verifies acyclic process models regarding soundness. It uses two different analyses, one for deadlocks and one for
  * lack of synchronizations. The approach is based on:
@@ -8,13 +15,12 @@
  * DOI: https://doi.org/10.7250/csimq.2021-27.01
  *
  */
-let SoundnessVerifier = (function () {
-
-    let elementId = 0;
+const SoundnessVerifier = (function () {
 
     function SoundnessVerifierFactory() {
 
         this.check = function (acyclicProcesses) {
+            console.log('Check soundness', acyclicProcesses);
             if (typeof acyclicProcesses === 'object') acyclicProcesses = asList(acyclicProcesses);
             if (!Array.isArray(acyclicProcesses)) acyclicProcesses = [ acyclicProcesses ];
             acyclicProcesses.forEach((process) => {
@@ -22,6 +28,8 @@ let SoundnessVerifier = (function () {
                 checkLacksOfSynchronization(process);
             });
         };
+
+        let triggers = {};
 
         /**
          * Check whether the given process model contains (potential) deadlocks.
@@ -64,12 +72,18 @@ let SoundnessVerifier = (function () {
             // This path could be reproduced to find the cause.
             andJoins.forEach(j => {
                 if (j.getId in info[j.getId]) {
+                    //let paths = determineTriggerLessPath(info, j);
+                    let paths = determineTriggerPaths(process, j);
                     faultBus.addError(process, {
-                        join: j
+                        join: j,
+                        paths: paths,
+                        flaws: determineFlaws(process, paths, j),
+                        //triggerLessPaths: determineTriggerSplits(process, j),
+                        simulation: determineDeadlockSimulationInformation(process, j, info)
                     }, FaultType.POTENTIAL_DEADLOCK);
                 }
             });
-        }
+        };
 
         /**
          * Determine the triggers of AND joins. These are those nodes, which trigger all predecessors of the AND gateway.
@@ -130,6 +144,8 @@ let SoundnessVerifier = (function () {
                 tmpR[x.getId] = x;
                 R[x.getId] = tmpR;
             });
+
+            triggers[process.getId] = R;
 
             return R;
         }
@@ -197,9 +213,103 @@ let SoundnessVerifier = (function () {
                 });
             }
             return L;
+        };
+
+
+        let determineDeadlockSimulationInformation = function (process, join, info) {
+            // Try to find a path to any preset node of join, on which there is no
+            // triggering node of the other preset nodes.
+            let pathFinder = PathFinderFactory();
+            let processTriggers = triggers[process.getId];
+            let scope = asList(process.getNodes).reduce((scope, n) => {
+                if (join.getId in info[n.getId]) scope[n.getId] = n;
+                return scope;
+            }, {});
+            let preset = asList(join.getPreset);
+            let path;
+            let cur = null;
+            let others = {};
+            do {
+                if (preset.length === 0) break;
+                cur = preset.shift();
+                let others = diff(join.getPreset, asObject([cur]));
+                let exclude = Object.keys(processTriggers).reduce((st, t) => {
+                    if (asList(diff(others, processTriggers[t])).length === 0) {
+                        st[t] = processTriggers[t];
+                    }
+                    return st;
+                }, {});
+
+                path = pathFinder.findPathFromStartToTarget(cur, process, scope, exclude);
+            } while (path === null);
+            console.log(path);
+            others = diff(join.getPreset, asObject([cur]));
+
+            // Now, we find the last possible non-triggering nodes of the other preset nodes.
+            let nonTriggers = asList(others).reduce((nonTriggers, other) => {
+                let triggerOther = processTriggers[other.getId];
+                nonTriggers[other.getId] = asList(triggerOther).reduce((nTk, trigger) => {
+                    let pre = trigger.getPreset;
+                    let nonTriggerOther = diff(pre, triggerOther);
+                    asList(nonTriggerOther).forEach(nonTriggerNode => {
+                        let flows = asList(nonTriggerNode.getOutgoing).filter(o => o.getTarget.getId !== trigger.getId);
+                        let bpmnFlows = flatten(flows.map(f => asList(f.elementIds)));
+                        let gatewayId = asList(nonTriggerNode.elementIds)
+                        if (bpmnFlows.length > 0 && gatewayId.length > 0) {
+                            nTk.push({
+                                gateway: gatewayId,
+                                edges: bpmnFlows
+                            });
+                        }
+                    });
+                    return nTk;
+                }, []);
+                return nonTriggers;
+            }, {});
+            console.log(nonTriggers);
+
+            return {
+                presetNode: cur,
+                others: others,
+                nonTriggers: nonTriggers,
+                path: path === null ? null : pathFinder.modelPathToBPMNPath(path)
+            };
+        };
+
+        let determineFlaws = function (process, paths, join) {
+            return asList(join.getPreset).reduce((a,i) => {
+                let path = union({}, paths[i.getId]);
+                a[i.getId] = asList(path).reduce((flaws,p) => {
+                    let nonTriggering = diff(p.getPreset, path);
+                    asList(nonTriggering).forEach(nT => {
+                        let flows = asList(nT.getOutgoing).filter(o => o.getTarget.getId in path);
+                        flaws = union(flaws, asObject(flows));
+                        flaws[nT.getId] = nT;
+                        paths[i.getId][nT.getId] = nT;
+                    });
+                    return flaws;
+                }, {});
+                paths[i.getId][join.getId] = join;
+                return a;
+            }, {});
         }
 
+        let determineTriggerPaths = function (process, join) {
+            let triggeredPaths = {};
 
+            let trig = triggers[process.getId];
+            asList(join.getPreset).forEach(i => {
+                let triggeredBy = Object.keys(trig).reduce((tB, node) => {
+                    if (i.getId in trig[node]) {
+                        tB[node] = process.getNodes[node];
+                    }
+                    return tB;
+                }, {});
+                triggeredPaths[i.getId] = triggeredBy;
+            });
+
+            return triggeredPaths;
+        }
 
         /*
          * Lack of synchronization
@@ -243,11 +353,39 @@ let SoundnessVerifier = (function () {
                             syncPhisFine[n.getId] = n;
                         }
 
+                        let fault = FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION;
+                        let pathFinder = PathFinderFactory();
+                        if (sync.isConvergingEnd) {
+                            fault = FaultType.POTENTIAL_ENDLESS_LOOP;
+                        }
+                        let paths = findPathsToIntersectionPoint(split, syncPhisFine, sync, process);
+                        let visited = {};
+                        let pathsToSync = asList(syncPhisFine).reduce((p, post) => {
+                            let path = pathFinder.findPathFromStartToTarget(sync, process, paths[post.getId],
+                                visited, [ post ]);
+                            if (path !== null) {
+                                p[post.getId] = pathFinder.modelPathToBPMNPath(path);
+                                visited = union(visited, asObject(path));
+                            }
+                            return p;
+                        }, {});
+                        // SIMULATION
+                        // Find path to split to cause actions.
+                        let pathToSplit = pathFinder.findPathFromStartToTarget(split, process);
+                        if (pathToSplit !== null) pathToSplit = pathFinder.modelPathToBPMNPath(pathToSplit);
+
                         faultBus.addError(process, {
                             split: split,
                             postset: syncPhisFine,
-                            intersectionPoint: sync
-                        }, FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION);
+                            intersectionPoint: sync,
+                            paths: paths,
+                            simulation: {
+                                split: split,
+                                sync: sync,
+                                pathToSplit: pathToSplit,
+                                pathsToSync: pathsToSync
+                            }
+                        }, fault);
                     }
                 }
             }
@@ -409,6 +547,16 @@ let SoundnessVerifier = (function () {
             let reversePostOrder = [];
             let postOrderNumbers = {};
 
+            let depthFirstSearch = function (n, visited, reversePostOrder, postOrderNumbers) {
+                visited[n.getId] = n;
+                let out = diff(n.getPostset, visited);
+                asList(out).forEach(i => {
+                    depthFirstSearch(i, visited, reversePostOrder, postOrderNumbers);
+                });
+                postOrderNumbers[n.getId] = reversePostOrder.length;
+                reversePostOrder.unshift(n);
+            }
+
             process.getStarts.forEach(s => {
                 asList(s.getPostset).forEach(s => {
                     depthFirstSearch(s, visited, reversePostOrder, postOrderNumbers);
@@ -417,15 +565,41 @@ let SoundnessVerifier = (function () {
             return { order: reversePostOrder, numbers: postOrderNumbers };
         }
 
-        let depthFirstSearch = function (n, visited, reversePostOrder, postOrderNumbers) {
-            visited[n.getId] = n;
-            let out = diff(n.getPostset, visited);
-            asList(out).forEach(i => {
-                depthFirstSearch(i, visited, reversePostOrder, postOrderNumbers);
-            });
-            postOrderNumbers[n.getId] = reversePostOrder.length;
-            reversePostOrder.unshift(n);
-        }
+        let findPathsToIntersectionPoint = function (split, postset, iPoint, process) {
+            // Go back from the intersection point to the split.
+            let visited = {};
+            let list = [ iPoint ];
+            while (list.length > 0) {
+                let cur = list.shift();
+                visited[cur.getId] = cur;
+                if (cur.getId === split.getId) continue;
+                let next = diff(cur.getPreset, visited);
+                list = asList(union(asObject(list), next));
+            }
+
+            // Visited contains all nodes with a path to the intersection point.
+            let paths = {};
+            let postList = asList(intersect(visited, postset));
+            do {
+                let curPostNode = postList.shift();
+                list = [ curPostNode ];
+                let path = {};
+                paths[curPostNode.getId] = path;
+                while (list.length > 0) {
+                    let cur = list.shift();
+                    path[cur.getId] = cur;
+                    if (cur.getId === iPoint.getId) continue;
+                    let next = intersect(visited, diff(cur.getPostset, path));
+                    list = asList(union(asObject(list), next));
+                }
+                path[split.getId] = split;
+            } while (postList.length > 0);
+
+            return paths;
+        };
+
+
+
 
     }
 
@@ -433,3 +607,5 @@ let SoundnessVerifier = (function () {
         return new SoundnessVerifierFactory();
     }
 })();
+
+export { SoundnessVerifier };

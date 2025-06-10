@@ -1,3 +1,19 @@
+import { asList, union, intersect, diff } from "./settools.mjs";
+import {
+    BPMNModel,
+    Start,
+    End,
+    Gateway,
+    GatewayType,
+    LoopProcess,
+    LoopTask,
+    Edge,
+    VirtualTask,
+    LoopEntryGateway, LoopExitGateway
+} from "./model.mjs";
+import { Normalizer } from "./normalize.mjs";
+import {flatten} from "array-flatten";
+
 /**
  * Performs a loop decomposition of given process models and returns a set of acyclic process models where
  * acyclic process models resulting of loops are of type LoopProcess.
@@ -13,7 +29,7 @@
  * Understanding and Decomposing Control-Flow Loops in Business Process Models. BPM 2022: 307-323
  * DOI: https://doi.org/10.1007/978-3-031-16103-2_21
  */
-let LoopDecomposition = (function () {
+const LoopDecomposition = (function () {
 
     let elementId = 0;
 
@@ -47,6 +63,7 @@ let LoopDecomposition = (function () {
          * @returns {{}}
          */
         let decomposeProcess = function (process) {
+            console.log('Decompose', process);
             let loops = process.getLoops;
             if (loops.length === 0) {
                 // The process model is already acyclic and needs no decomposition.
@@ -81,6 +98,7 @@ let LoopDecomposition = (function () {
                 let newProcess = false;
                 if (!(identifierExit.getId in uniqueLoops)) {
                     loopProcess = new LoopProcess(identifierExit.getId);
+                    loopProcess.setSuper(process);
                     processes[loopProcess.getId] = loopProcess;
                     uniqueLoops[identifierExit.getId] = loopProcess;
 
@@ -103,6 +121,20 @@ let LoopDecomposition = (function () {
                 let processRealEntries = intersect(process.getNodes, realEntries);
                 let processExits = intersect(process.getNodes, loop.getExits);
 
+                // Repair all exits and entries
+                asList(loop.getExits).forEach(el => {
+                    if (el.getKind !== GatewayType.XOR) {
+                        el.setKind(GatewayType.XOR);
+                        el.setRepaired(true);
+                    }
+                });
+                asList(loop.getEntries).forEach(el => {
+                    if (el.getKind === GatewayType.AND) {
+                        el.setKind(GatewayType.OR);
+                        el.setRepaired(true);
+                    }
+                });
+
                 // Remove all nodes of the loop being not in its do-body (except the exits).
                 let nonDoBody = diff(loop.getNodes, loop.getDoBody);
                 nonDoBody = union(nonDoBody, processExits);
@@ -111,21 +143,26 @@ let LoopDecomposition = (function () {
                 // Insert a loop node for the loop
                 let loopNode = new LoopTask('ln' + elementId++, loopProcess);
                 loopNode.setUI(loop.getUI);
+                loopNode.addElementId(loop.elementIds);
                 process.addNode(loopNode);
                 // Insert the converging gateway
-                let xorCon = new Gateway('ln' + elementId++, null, GatewayType.XOR);
+                let xorCon = new LoopEntryGateway('ln' + elementId++, processRealEntries);
                 xorCon.setUI(asList(processRealEntries).map(p => p.getUI));
+                xorCon.addElementId(flatten(asList(processRealEntries).map(p => p.elementIds)));
                 process.addNode(xorCon);
                 // Insert the diverging gateway
-                let xorDiv = new Gateway('ln' + elementId++, null, GatewayType.XOR);
+                let xorDiv = new LoopExitGateway('ln' + elementId++, processExits);
                 xorDiv.setUI(asList(processExits).map(p => p.getUI));
+                xorDiv.addElementId(flatten(asList(processExits).map(p => p.elementIds)));
                 process.addNode(xorDiv);
                 // Add edges
                 let inL = new Edge('ln' + elementId++, xorCon, loopNode);
                 inL.setUI(loopNode.getUI);
+                inL.addElementId(loopNode.elementIds);
                 process.addEdge(inL);
                 let outL = new Edge('ln' + elementId++, loopNode, xorDiv);
                 outL.setUI(loopNode.getUI);
+                outL.addElementId(loopNode.elementIds);
                 process.addEdge(outL);
                 xorCon.addPostset(loopNode); loopNode.addPreset(xorCon);
                 loopNode.addPostset(xorDiv); xorDiv.addPreset(loopNode);
@@ -147,6 +184,7 @@ let LoopDecomposition = (function () {
                     asList(pred.getOutgoing).forEach(o => {
                         if (o.getTarget.getId in realEntries) {
                             edge.setUI(o.getUI);
+                            edge.addElementId(o.elementIds);
                         }
                     });
                 });
@@ -159,18 +197,21 @@ let LoopDecomposition = (function () {
                     asList(succ.getIncoming).forEach(i => {
                         if (i.getSource.getId in loop.getExits) {
                             edge.setUI(i.getUI);
+                            edge.addElementId(i.elementIds);
                         }
                     });
                 });
                 if (asList(xorCon.getPreset).length === 1) {
                     let xorConT = new VirtualTask(xorCon.getId);
                     xorConT.setUI(xorCon.getUI);
+                    xorConT.addElementId(xorCon.elementIds);
                     process.replaceNode(xorCon, xorConT);
                     xorCon = xorConT;
                 }
                 if (asList(xorDiv.getPostset).length === 1) {
                     let xorDivT = new VirtualTask(xorDiv.getId);
                     xorDivT.setUI(xorDiv.getUI);
+                    xorDivT.addElementId(xorDiv.elementIds);
                     process.replaceNode(xorDiv, xorDivT);
                     xorDiv = xorDivT;
                 }
@@ -198,9 +239,11 @@ let LoopDecomposition = (function () {
                             let lTarget = loop.getNodes[target.getId];
                             let start = new Start('ln' + elementId++, 'Start');
                             start.setUI(source.getUI);
+                            start.addElementId(source.elementIds);
                             loopProcess.addNode(start);
                             let startEdge = new Edge('ln' + elementId++, start, lTarget);
                             startEdge.setUI(start.getUI);
+                            startEdge.addElementId(start.elementIds);
                             loopProcess.addEdge(startEdge);
 
                             // Insert a new end (the source must be in the loop)
@@ -209,30 +252,38 @@ let LoopDecomposition = (function () {
                                 // Insert a new gateway, which represents the old exit
                                 let g = new Gateway('ln' + elementId++, null, GatewayType.XOR);
                                 g.setUI(target.getUI);
+                                g.addElementId(target.elementIds);
                                 loopProcess.addNode(g);
                                 let gEdge = new Edge('ln' + elementId++, lSource, g);
                                 gEdge.setUI(g.getUI);
+                                gEdge.addElementId(g.elementIds);
                                 loopProcess.addEdge(gEdge);
                                 // Insert a start node coming from outside the loop
                                 let start2 = new Start('ln' + elementId++, 'Start');
                                 start2.setUI(target.getUI);
+                                start2.addElementId(target.elementIds);
                                 loopProcess.addNode(start2);
                                 let start2Edge = new Edge('ln' + elementId++, start2, g);
                                 start2Edge.setUI(start2.getUI);
+                                start2Edge.addElementId(start2.elementIds);
                                 loopProcess.addEdge(start2Edge);
 
                                 let end = new End('ln' + elementId++, 'End');
                                 end.setUI(target.getUI);
+                                end.addElementId(target.elementIds);
                                 loopProcess.addNode(end);
                                 let endEdge = new Edge('ln' + elementId++, g, end);
                                 endEdge.setUI(end.getUI);
+                                endEdge.addElementId(end.elementIds);
                                 loopProcess.addEdge(endEdge);
                             } else {
                                 let end = new End('ln' + elementId++, 'End');
                                 end.setUI(target.getUI);
+                                end.addElementId(target.elementIds);
                                 loopProcess.addNode(end);
                                 let endEdge = new Edge('ln' + elementId++, lSource, end);
                                 endEdge.setUI(end.getUI);
+                                endEdge.addElementId(end.elementIds);
                                 loopProcess.addEdge(endEdge);
                             }
 
@@ -244,9 +295,11 @@ let LoopDecomposition = (function () {
                             let lSource = loop.getNodes[source.getId];
                             let end = new End('ln' + elementId++, 'End');
                             end.setUI(source.getUI);
+                            end.addElementId(source.elementIds);
                             loopProcess.addNode(end);
                             let endEdge = new Edge('ln' + elementId++, lSource, end);
                             endEdge.setUI(end.getUI);
+                            endEdge.addElementId(end.elementIds);
                             loopProcess.addEdge(endEdge);
 
                             // We do not need the flow in the loop net, so we do not add it.
@@ -255,6 +308,7 @@ let LoopDecomposition = (function () {
                             if ((source.getId in loop.getNodes) && (target.getId in loop.getNodes)) {
                                 let edge = new Edge(flow.getId, loopProcess.getNodes[source.getId], loopProcess.getNodes[target.getId]);
                                 edge.setUI(flow.getUI);
+                                edge.addElementId(flow.elementIds);
                                 loopProcess.addEdge(edge);
                             }
                         }
@@ -280,3 +334,5 @@ let LoopDecomposition = (function () {
         return new LoopDecompositionFactory();
     }
 })();
+
+export { LoopDecomposition };
