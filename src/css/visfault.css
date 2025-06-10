@@ -127,7 +127,8 @@
 }
 
 .highlight {
-    --shadow: 0 0 24px 0 var(--hint-color);
+    --shadow: 0 0 12px var(--info-color);
+    filter: drop-shadow(var(--shadow));
 }
 .vis-line {
     transition: all 0.5s ease-in-out;
@@ -164,21 +165,6 @@
 }
 .vis-line .djs-visual marker * {
     fill: var(--stroke-color) !important;
-}
-.highlight .djs-visual rect {
-    -webkit-box-shadow: var(--shadow);
-    -moz-box-shadow: var(--shadow);
-    box-shadow: var(--shadow);
-}
-.highlight .djs-visual circle {
-    -webkit-box-shadow: var(--shadow);
-    -moz-box-shadow: var(--shadow);
-    box-shadow: var(--shadow);
-}
-.highlight .djs-visual polygon {
-    -webkit-box-shadow: var(--shadow);
-    -moz-box-shadow: var(--shadow);
-    box-shadow: var(--shadow);
 }
 .note.info {
     --note-background: var(--info-color);
