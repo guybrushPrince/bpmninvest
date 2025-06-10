@@ -38,8 +38,6 @@ let PathFinderFactory = function(modeler = null) {
                 list = asList(union(asObject(list), next));
             } while (list.length > 0);
 
-            console.log(pathArea, allowed, scope, exclude);
-
             if (asList(intersect(pathArea, asObject(starts))).length === 0) return null;
 
             // Now, we walk from the start node to the target knowing that each node in pathArea being reachable from
@@ -53,8 +51,6 @@ let PathFinderFactory = function(modeler = null) {
                 cur = asList(diff(intersect(cur.getPostset, pathArea), pathSet)).shift();
             } while (cur !== undefined && cur.getId !== target.getId);
             path.push(cur);
-
-            console.log(path);
 
             // It may happen that we are in a sub process after loop decomposition. Therefore, we have to extend the path
             // with a path in the super process.
@@ -92,7 +88,6 @@ let PathFinderFactory = function(modeler = null) {
 
         this.mapNodeSetToBPMN = function (set) {
             if (elementRegistry === null) return [];
-            console.log('Map ', set, ' to BPMN');
             let loopTasks = {};
             let loopEntryGateways = {};
             let loopExitGateways = {};
@@ -109,11 +104,9 @@ let PathFinderFactory = function(modeler = null) {
                 let n = list[0];
                 ordinary[n.getId] = n;
             } else return [];
-            console.log('ordinaries', ordinary);
             // Collect the ordinaries.
             let bpmn = flatten(asList(ordinary).reduce((bpmn, o) => {
                 if (o.elementIds !== undefined && o.elementIds !== null) {
-                    console.log('Push', o, o.elementIds);
                     bpmn.push(asList(o.elementIds));
                 }
                 return bpmn;
@@ -123,16 +116,12 @@ let PathFinderFactory = function(modeler = null) {
             let bpmnExits = asList(loopExitGateways).reduce((bp, g) => {
                 asList(g.getExits).forEach(exit => {
                     if (exit.elementIds !== undefined && exit.elementIds !== null) {
-                        console.log(exit, 'with', exit.elementIds);
                         asList(exit.elementIds).forEach(ex => {
                             let exBPMN = elementRegistry.get(ex);
-                            console.log(exit, 'with', exit.elementIds, 'check', exBPMN);
                             if (exBPMN !== undefined && 'outgoing' in exBPMN) {
                                 let isWithin = exBPMN.outgoing.filter(o => {
-                                    console.log(o, o.target, o.target.id, asList(bpmn));
                                     return bpmn.includes(o.target.id) || bpmn.includes(o.id);
                                 });
-                                console.log('Has Within', isWithin);
                                 if (isWithin.length > 0) bp.push(ex);
                             }
                         });
@@ -167,30 +156,24 @@ let PathFinderFactory = function(modeler = null) {
             // Make it unique.
             bpmn.push(bpmnExits);
             bpmn.push(bpmnEntries);
-            console.log('Intermediate', bpmn);
             bpmn = flatten(bpmn);
             bpmn = [...new Set(bpmn)];
             // Map to elements
             let bpmnElements = flatten(bpmn.map(elId => {
                 if (typeof elId !== 'string') return [];
-                console.log('Try to find', elId);
                 let element = elementRegistry.get(elId);
                 if (element !== undefined) {
                     if ('outgoing' in element && 'incoming' in element) {
-                        console.log('Check', element.id, element.outgoing, element.incoming, bpmn);
                         let flowsOut = element.outgoing.filter(flow => bpmn.includes(flow.target.id));
                         let flowsIn = element.incoming.filter(flow => bpmn.includes(flow.source.id));
                         let flows = flowsOut.concat(flowsIn);
                         flows.push(element);
-                        console.log(flows);
                         return flows;
                     } else return [ element ];
                 }
                 return [];
             }));
-            console.log('Häh', bpmnElements, bpmnElements.concat(bpmnElementsLoops), new Set(bpmnElements.concat(bpmnElementsLoops)));
             bpmnElements = [...new Set(bpmnElements.concat(bpmnElementsLoops))];
-            console.log('Mapped ', set, ' to ', bpmnElements);
             return bpmnElements;
         }
     }

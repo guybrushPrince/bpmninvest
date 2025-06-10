@@ -20,7 +20,6 @@ const SoundnessVerifier = (function () {
     function SoundnessVerifierFactory() {
 
         this.check = function (acyclicProcesses) {
-            console.log('Check soundness', acyclicProcesses);
             if (typeof acyclicProcesses === 'object') acyclicProcesses = asList(acyclicProcesses);
             if (!Array.isArray(acyclicProcesses)) acyclicProcesses = [ acyclicProcesses ];
             acyclicProcesses.forEach((process) => {
@@ -242,7 +241,6 @@ const SoundnessVerifier = (function () {
 
                 path = pathFinder.findPathFromStartToTarget(cur, process, scope, exclude);
             } while (path === null);
-            console.log(path);
             others = diff(join.getPreset, asObject([cur]));
 
             // Now, we find the last possible non-triggering nodes of the other preset nodes.
@@ -266,7 +264,6 @@ const SoundnessVerifier = (function () {
                 }, []);
                 return nonTriggers;
             }, {});
-            console.log(nonTriggers);
 
             return {
                 presetNode: cur,

@@ -80,6 +80,7 @@ const ModelExtractor = (function () {
                 else if (isOfType(node, 'Start')) nodes[id] = new Start(id, type);
                 else if (isOfType(node, 'End')) nodes[id] = new End(id, type);
                 else if (isOfType(node, 'Gateway')) nodes[id] = new Gateway(id, type);
+                else if (isOfType(node, 'label')) return null;
                 else {
                     console.log([id, type]);
                     return null;
@@ -91,17 +92,6 @@ const ModelExtractor = (function () {
 
         let getOrCreateDetailedNode = function (node) {
             let n = getOrCreateNode(node);
-            if (n instanceof Start) {
-                console.log(node);
-                /*if ('eventDefinitions' in node && Array.isArray(node.eventDefinitions)) {
-                    for (let ev of node.eventDefinitions) {
-                        if (ev.$type.includes('Timer')) n.setEvent(EventType.TIMER);
-                        else if (ev.$type.includes('Conditional')) n.setEvent(EventType.CONDITIONAL);
-                        else if (ev.$type.includes('Message')) n.setEvent(EventType.MESSAGE);
-                        else if (ev.$type.includes('Signal')) n.setEvent(EventType.SIGNAL);
-                    }
-                }*/
-            }
             return n;
         };
 

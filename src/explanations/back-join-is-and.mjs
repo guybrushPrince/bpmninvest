@@ -92,8 +92,6 @@ let explanation = function (panel, information, modeler, process) {
     let simHandler = TokenSimulationHandling(modeler);
     simHandler.start();
 
-    console.log('Path to not in', pathToNotIn);
-
     simHandler.setDecisions(pathToNotIn);
 
     simHandler.pauseIfEntered(backJoin, (node) => {

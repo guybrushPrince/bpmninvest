@@ -88,7 +88,6 @@ let explanation = function (panel, information, modeler) {
 
     // Token simulation
     let simInformation = information.simulation;
-    console.log(simInformation);
 
     let simHandler = TokenSimulationHandling(modeler);
     simHandler.start();

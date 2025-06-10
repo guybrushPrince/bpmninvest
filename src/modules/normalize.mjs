@@ -24,7 +24,6 @@ const Normalizer = (function () {
         let elementId = 1;
 
         this.normalize = function (bpmn, withFaults = true) {
-            console.log('Normalize', bpmn);
             if (!Array.isArray(bpmn)) bpmn = [bpmn];
             bpmn.forEach((bpmn) => {
                 if (bpmn instanceof BPMNModel) {

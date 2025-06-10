@@ -37,10 +37,6 @@ let TokenSimulationHandling = function (modeler) {
                 }
             });
             simulationSupport.toggleSimulation(true);
-            console.log(simulationSupport);
-            console.log(simulator);
-            console.log(elementRegistry);
-            console.log(eventBus);
         };
 
         this.stop = function () {

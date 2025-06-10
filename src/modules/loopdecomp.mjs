@@ -51,7 +51,6 @@ const LoopDecomposition = (function () {
                         a = union(a, decomposeProcess(p));
                         return a;
                     }, {}));
-                    //asList(acyclicProcesses).forEach(p => console.log(p.asDot()));
                 }
             });
             return acyclicProcesses;
@@ -63,7 +62,6 @@ const LoopDecomposition = (function () {
          * @returns {{}}
          */
         let decomposeProcess = function (process) {
-            console.log('Decompose', process);
             let loops = process.getLoops;
             if (loops.length === 0) {
                 // The process model is already acyclic and needs no decomposition.

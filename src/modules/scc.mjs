@@ -46,7 +46,6 @@ let SCC = function () {
          * @returns {*[]}
          */
         this.analyze = function (process) {
-            console.log('Find SCCs', process);
             // Initialize
             asList(process.getNodes).forEach((n) => {
                 index[n.getId] = -1;

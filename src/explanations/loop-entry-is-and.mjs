@@ -103,12 +103,9 @@ let explanation = function (panel, information, modeler, process) {
     let simHandler = TokenSimulationHandling(modeler);
     simHandler.start();
 
-    console.log('Path to exit', pathToExit);
-
     simHandler.setDecisions(pathToExit);
 
     simHandler.pauseIfEntered(exit, (node) => {
-        console.log('Entered', exit, pathToEntry);
         simHandler.setDecisions(pathToEntry);
 
         simHandler.pauseIfEntered(entry, (node) => {

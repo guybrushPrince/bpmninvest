@@ -20,7 +20,7 @@ import { SCC } from "./modules/scc.mjs";
 import { Normalizer } from "./modules/normalize.mjs";
 import { Visualizer } from "./modules/visualizer.mjs";
 
-import diagramXML from './../example/arzttermin-faulty.bpmn';
+import diagramXML from './example/example.bpmn';
 import { faultBus } from "./modules/faultbus.mjs";
 
 
@@ -37,18 +37,12 @@ var modeler = new BpmnModeler({
 
 let eventBus = modeler.get('eventBus');
 
-console.log(modeler);
-console.log(modeler.get('elementRegistry'));
-console.log(eventBus);
-console.log(modeler.get('toggleMode'));
-
 let analyzeSoundness = (function() {
     let vis = null;
     return async function() {
         // Initialize the visualizer
         if (vis !== null) vis.destruct();
         vis = Visualizer();
-        console.log(vis);
         vis.initialize(modeler, faultBus);
         let extractor = ModelExtractor();
         let model = extractor.extractDiagram(modeler);
@@ -63,9 +57,6 @@ let analyzeSoundness = (function() {
 })();
 
 eventBus.on('elements.changed', function(context) {
-    console.log('Elements have changed');
-    console.log(context);
-    //var elements = context.elements;
     try {
         analyzeSoundness();
     } catch (exception) {
@@ -220,38 +211,3 @@ function debounce(fn, timeout) {
         timer = setTimeout(fn, timeout);
     };
 }
-
-//"use strict";
-/*import BpmnModeler from 'bpmn-js/lib/Modeler';
-import $ from "jquery";
-
-let modeler = new BpmnModeler();
-
-console.log(modeler);
-let url = 'example/arzttermin-faulty.bpmn';
-modeler.attachTo(document.getElementById('canvas'));
-
-async function openDiagram(bpmnXML) {
-
-    // import diagram
-    try {
-
-        await modeler.importXML(bpmnXML);
-
-        // access modeler components
-        let canvas = modeler.get('canvas');
-        //let overlays = bpmnModeler.get('overlays');
-
-
-        // zoom to fit full viewport
-        canvas.zoom('fit-viewport');
-    } catch (err) {
-
-        console.error('could not import BPMN 2.0 diagram', err);
-    }
-}
-
-
-$.get(url, openDiagram, 'text');
-
-export { modeler };*/

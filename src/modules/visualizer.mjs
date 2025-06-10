@@ -297,7 +297,6 @@ const Visualizer = (function () {
         };
 
         let addOverlay = function (ui, type, text, detailAction = () => {}, detailClose = () => {}, show = false) {
-            console.log(ui);
             ui.toArray().forEach(u => {
                 let id = $(u).data('element-id');
                 if (id !== undefined) {
@@ -342,9 +341,7 @@ const Visualizer = (function () {
                 let link = $(this).data('element-link');
                 if (link !== null && link !== undefined) {
                     let sel = link.map(l => '[data-element-id="' + l + '"]').join(',');
-                    console.log(sel);
                     $(sel).addClass(VisClasses.HIGHLIGHT);
-                    console.log($(sel));
                 }
             }).on('mouseout', function () {
                 let link = $(this).data('element-link');
@@ -374,7 +371,6 @@ const Visualizer = (function () {
         };
         let mapModelToBPMNUI = function (set) {
             let uis = PathFinderFactory(modelerInstance).mapNodeSetToBPMN(set).map(b => $('[data-element-id="' + b.id + '"]'));
-            console.log('UIs', uis);
             return uis;
         };
         let addClass = function (ui, clazz, withParents = false) {

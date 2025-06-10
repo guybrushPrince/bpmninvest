@@ -12,11 +12,9 @@ let explanation = function (panel, information, modeler) {
 
     let pathFinder = PathFinderFactory(modeler);
     let divergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ diverging ])).concat([]);
-    console.log('divergings', divergingProcessElement.concat([]));
     divergingProcessElement = divergingProcessElement.shift();
     let convergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ converging ])).concat([]);
     convergingProcessElement = convergingProcessElement.shift();
-    console.log('Conv-Diver', converging, diverging, convergingProcessElement, divergingProcessElement);
 
     panel.append('<h1>Endless Loop because of Missing Synchronization</h1>');
 
@@ -105,7 +103,6 @@ let explanation = function (panel, information, modeler) {
 
     // Token simulation
     let simInformation = information.simulation;
-    console.log(simInformation);
 
     let simHandler = TokenSimulationHandling(modeler);
     simHandler.start();
