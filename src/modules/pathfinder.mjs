@@ -1,6 +1,6 @@
-import {asList, asObject, diff, intersect, union} from "./settools.mjs";
-import {blowUpWithEdges, LoopEntryGateway, LoopExitGateway, LoopProcess, LoopTask, Start} from "./model.mjs";
-import {flatten} from "array-flatten";
+import { asList, asObject, diff, intersect, union } from "./settools.mjs";
+import { blowUpWithEdges, LoopEntryGateway, LoopExitGateway, LoopProcess, LoopTask, Start, Task } from "./model.mjs";
+import { flatten } from "array-flatten";
 
 let PathFinderFactory = function(modeler = null) {
 
@@ -55,9 +55,12 @@ let PathFinderFactory = function(modeler = null) {
             // It may happen that we are in a sub process after loop decomposition. Therefore, we have to extend the path
             // with a path in the super process.
             if (process.getSuper !== null) {
-                // Identify the corresponding loop node
+                // Identify the corresponding loop node or sub process
                 let supProcess = process.getSuper;
-                let targetNodes = asList(supProcess.getNodes).filter(n => (n instanceof LoopTask && n.getLoop.getId === process.getId));
+                let targetNodes = asList(supProcess.getNodes).filter(n =>
+                    (n instanceof LoopTask && n.getLoop.getId === process.getId) ||
+                    (n instanceof Task && n.getSubProcess.getId === process.getId)
+                );
 
                 let superPath = this.findPathFromStartToTarget(targetNodes.shift(), supProcess);
                 superPath.pop(); // Remove the loop node

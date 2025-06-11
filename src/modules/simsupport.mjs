@@ -13,7 +13,7 @@ import {
     End,
     LoopTask,
     LoopEntryGateway,
-    LoopExitGateway
+    LoopExitGateway, ProcessEvent
 } from "./model.mjs";
 import { PAUSE_SIMULATION_EVENT, TRACE_EVENT } from "bpmn-js-token-simulation/lib/util/EventHelper.js";
 import {flatten} from "array-flatten";
@@ -107,7 +107,7 @@ let TokenSimulationHandling = function (modeler) {
             if (!Array.isArray(node)) node = [ node ];
             node.forEach(n => {
                 if ((n instanceof Gateway && n.getKind !== GatewayType.AND) ||
-                    (n instanceof Task) || (n instanceof Start) || (n instanceof End)) {
+                    (n instanceof Task) || (n instanceof ProcessEvent) || (n instanceof Start) || (n instanceof End)) {
                     if (!isEmpty(n.elementIds)) {
                         let id = asList(n.elementIds)[0];
                         simulationSupport.triggerElement(id);

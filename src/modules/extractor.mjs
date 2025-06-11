@@ -1,5 +1,7 @@
-import { BPMNModel, Edge, End, EventType, Gateway, MessageFlow, Process, Start, Task } from "./model.mjs";
+import { BPMNModel, Edge, End, EventType, Gateway, MessageFlow, Process, Start, Task, ProcessEvent } from "./model.mjs";
 import { flatten } from "array-flatten";
+import { getBusinessObject } from "bpmn-js/lib/util/ModelUtil";
+import { asList } from "./settools.mjs";
 
 const ModelExtractor = (function () {
 
@@ -12,9 +14,17 @@ const ModelExtractor = (function () {
             let collaborations = findCollaborations(elements);
             if (collaborations.length === 0) {
                 collaborations = findProcessLike(elements);
+            } else {
+                collaborations = collaborations.concat(findSubProcesses(elements));
             }
             let processes = identifyProcesses(collaborations);
             let iProcesses = createInternProcesses(processes);
+
+            asList(nodes).forEach(n => {
+                if (n instanceof Task && typeof n.getSubProcess === 'function') {
+                    n.getSubProcess(iProcesses);
+                }
+            })
 
             let model = new BPMNModel(processes.map(p => p.id).join("-"));
             model.setProcesses(iProcesses);
@@ -29,6 +39,9 @@ const ModelExtractor = (function () {
             return elements.filter(el => isOfType(el, 'Process') ||
                 isOfType(el, 'Participant') || isOfType(el, 'SubProcess'));
         };
+        let findSubProcesses = function (elements) {
+            return elements.filter(el => isOfType(el, 'SubProcess'));
+        };
 
         let identifyProcesses = function (collaborations) {
             return flatten(collaborations.map(col => {
@@ -42,10 +55,14 @@ const ModelExtractor = (function () {
         };
 
         let createInternProcesses = function (processes) {
+            let subProcesses = processes.filter(p => isOfType(p, 'SubProcess'));
+            let nonSubProcesses = processes.filter(p => !isOfType(p, 'SubProcess'));
+            processes = subProcesses.concat(nonSubProcesses);
+
             return processes.map(p => {
                 let process = new Process(p.id);
                 process.addElementId(p.id);
-                let nfs = extractNodesAndFlows(p);
+                let nfs = extractNodesAndFlows(p, process);
                 process.setNodes(nfs.reduce((n,nf) => {
                     if (!(nf instanceof Edge)) n[nf.getId] = nf;
                     return n;
@@ -60,29 +77,53 @@ const ModelExtractor = (function () {
             })
         };
 
-        let extractNodesAndFlows = function (process) {
+        let extractNodesAndFlows = function (process, processModel) {
             let nodesAndFlows = process.children.map(el => {
                 if (isOfType(el, 'Flow')) {
-                    return getOrCreateEdge(el);
+                    return getOrCreateEdge(el, processModel);
                 } else {
-                    return getOrCreateDetailedNode(el);
+                    return getOrCreateDetailedNode(el, processModel);
                 }
             });
             nodesAndFlows = nodesAndFlows.filter(nf => nf !== null);
             return nodesAndFlows;
         };
 
-        let getOrCreateNode = function (node) {
+        let getOrCreateNode = function (node, process) {
             let id = node.id;
             let type = node.type;
             if (!(id in nodes)) {
-                if (isOfType(node, 'Task')) nodes[id] = new Task(id, type);
-                else if (isOfType(node, 'Start')) nodes[id] = new Start(id, type);
+                if (isOfType(node, 'Task') || isOfType(node, 'SubProcess')) {
+                    nodes[id] = new Task(id, type);
+                    if (isOfType(node, 'SubProcess')) {
+                         nodes[id].setSubProcess(function (processes) {
+                             for (let p of processes) {
+                                 if (p.getId === id) {
+                                     nodes[id].setSubProcess(p);
+                                     p.setSuper(process);
+                                     return;
+                                 }
+                             }
+                         });
+                    }
+                } else if (isOfType(node, 'Start')) nodes[id] = new Start(id, type);
                 else if (isOfType(node, 'End')) nodes[id] = new End(id, type);
                 else if (isOfType(node, 'Gateway')) nodes[id] = new Gateway(id, type);
-                else if (isOfType(node, 'label')) return null;
-                else {
-                    console.log([id, type]);
+                else if (isOfType(node, 'label') || isOfType(node, 'Association')) return null;
+                else if (isOfType(node, 'BoundaryEvent')) {
+                    nodes[id] = new ProcessEvent(id, type);
+                    let bO = getBusinessObject(node);
+                    if ('attachedToRef' in bO) {
+                        let attached = getOrCreateNode(bO.attachedToRef, process);
+                        if (attached) {
+                            attached.addBoundary(nodes[id]);
+                        }
+                    }
+                    if ('cancelActivity' in bO) {
+                        nodes[id].setInterrupting(bO.cancelActivity);
+                    }
+                } else {
+                    console.log([id, type, node]);
                     return null;
                 }
             }
@@ -90,17 +131,17 @@ const ModelExtractor = (function () {
             return nodes[id];
         };
 
-        let getOrCreateDetailedNode = function (node) {
-            let n = getOrCreateNode(node);
+        let getOrCreateDetailedNode = function (node, process) {
+            let n = getOrCreateNode(node, process);
             return n;
         };
 
-        let getOrCreateEdge = function (flow) {
+        let getOrCreateEdge = function (flow, process) {
             let id = flow.id;
             if (!(id in edges)) {
                 edges[id] = new Edge(id,
-                    getOrCreateNode(flow.source),
-                    getOrCreateNode(flow.target)
+                    getOrCreateNode(flow.source, process),
+                    getOrCreateNode(flow.target, process)
                 );
             }
             edges[id].addElementId(id);

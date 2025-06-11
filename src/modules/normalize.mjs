@@ -36,6 +36,8 @@ const Normalizer = (function () {
             if (process instanceof Process) {
                 normalizeSingletonProcess(process);
                 process.computeInOut();
+                normalizeBoundaryEvents(process);
+                process.computeInOut();
                 normalizeStarts(process, withFaults);
                 process.isValid();
                 process.computeInOut();
@@ -77,6 +79,67 @@ const Normalizer = (function () {
                 newEdge.addElementId(single.elementIds);
                 process.addEdge(newEdge);
             }
+        }
+
+        let normalizeBoundaryEvents = function (process) {
+            // Boundary events on tasks / sub-processes are handled by transforming them into an explicit gateway.
+            let withBoundaryEvents = asList(process.getNodes).filter(n =>
+                n instanceof Task && asList(n.getBoundaries).length >= 1);
+            withBoundaryEvents.forEach(n => {
+                let boundaryEvents = n.getBoundaries;
+                // It depends on whether there is a non-interrupting boundary event or not if we require an
+                // exclusive or inclusive gateway to model its behavior.
+                let nonInterrupting = asList(boundaryEvents).filter(b => !b.isInterrupting);
+                let gatewayKind = GatewayType.XOR;
+                if (nonInterrupting.length >= 1) {
+                    // We require an inclusive gateway.
+                    gatewayKind = GatewayType.OR;
+                }
+                let gateway = new Gateway('n' + elementId++, null, gatewayKind);
+                gateway.setUI(asList(boundaryEvents).map(b => b.getUI));
+                gateway.addElementId(asList(boundaryEvents).map(b => b.elementIds));
+                process.addNode(gateway);
+
+                // Following p. 151 of the BPMN spec, an activity with multiple outgoing flows
+                // will place a token on all its outgoing flows. We model this explicitly with an
+                // AND gateway.
+                // For this reason, we have to normalize the task first.
+                if (asList(n.getOutgoing).length >= 2) {
+                    // Add a parallel gateway after the task.
+                    let g = new Gateway('n' + elementId++, null, GatewayType.AND);
+                    g.setUI(n.getUI);
+                    g.addElementId(n.elementIds);
+                    process.addNode(g);
+                    asList(n.getOutgoing).forEach(function (e) {
+                        e.setSource(g);
+                    });
+                    // Add an edge to the splitting gateway for parallel outgoing flows.
+                    let edge = new Edge('n' + elementId++, gateway, g);
+                    edge.setUI(n.getUI);
+                    edge.addElementId(n.elementIds);
+                    process.addEdge(edge);
+
+                    // Now, this gateway is the "new" n.
+                    n = g;
+                } else {
+                    // Redirect the edges to start from the new boundary gateway.
+                    asList(n.getOutgoing).forEach(function (e) {
+                        e.setSource(gateway);
+                    });
+                }
+                // Add an edge to the new gateway for the boundary events.
+                let edge = new Edge('n' + elementId++, n, gateway);
+                edge.setUI(n.getUI);
+                edge.addElementId(n.elementIds);
+                process.addEdge(edge);
+                // Add an edge from the new boundary gateway to the event(s).
+                asList(boundaryEvents).forEach(b => {
+                    let edge = new Edge('n' + elementId++, gateway, b);
+                    edge.setUI(b.getUI);
+                    edge.addElementId(b.elementIds);
+                    process.addEdge(edge);
+                });
+            });
         }
 
         let normalizeStarts = function (process, withFaults = true) {

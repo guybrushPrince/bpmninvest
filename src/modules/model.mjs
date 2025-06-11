@@ -221,11 +221,28 @@ class Node extends UIModel {
 }
 
 class Task extends Node {
+    #boundaries = {};
+    #subProcess = null;
+
     get copy() {
         let t = new Task(this.getId, this.getType);
         t.addElementId(this.elementIds);
         t.setUI(this.getUI);
+        t.setBoundaries(this.getBoundaries);
+        t.setSubProcess = this.getSubProcess;
         return t;
+    }
+
+    get getBoundaries() { return this.#boundaries; }
+    addBoundary(boundary) {
+        this.#boundaries[boundary.getId] = boundary;
+    }
+    setBoundaries(boundaries) {
+        this.#boundaries = union(this.getBoundaries, boundaries);
+    }
+    get getSubProcess() { return this.#subProcess; }
+    setSubProcess(subProcess) {
+        this.#subProcess = subProcess;
     }
 }
 class VirtualTask extends Node {
@@ -356,6 +373,29 @@ class End extends Node {
 
     asDot() {
         return 'node' + this.getId.replaceAll('-', '_') + '[shape=doublecircle,label="End"];';
+    }
+}
+class ProcessEvent extends Node {
+    #interrupting = false;
+    #event = null;
+
+    setEvent(event) {
+        this.#event = event;
+    }
+    get getEvent() {
+        return this.#event;
+    }
+
+    get isInterrupting() { return this.#interrupting; }
+    setInterrupting(interrupting) {
+        this.#interrupting = interrupting;
+    }
+    get copy() {
+        let ev = new ProcessEvent(this.getId, this.getType);
+        ev.addElementId(this.elementIds);
+        ev.setUI(this.getUI);
+        ev.setInterrupting(this.isInterrupting);
+        return ev;
     }
 }
 
@@ -554,4 +594,5 @@ let blowUpWithEdges = function (elements) {
 };
 
 export { BPMNModel, Process, Node, Edge, Start, End, Gateway, GatewayType, Task, Loop, LoopEntryGateway, LoopTask,
-    LoopExitGateway, VirtualTask, EventType, MessageFlow, LoopProcess, blowUpWithLoopNodes, blowUpWithEdges }
+    LoopExitGateway, VirtualTask, EventType, MessageFlow, LoopProcess, ProcessEvent,
+    blowUpWithLoopNodes, blowUpWithEdges }
