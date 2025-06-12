@@ -93,7 +93,8 @@ const ModelExtractor = (function () {
             let id = node.id;
             let type = node.type;
             if (!(id in nodes)) {
-                if (isOfType(node, 'Task') || isOfType(node, 'SubProcess')) {
+                if (isOfType(node, 'Task') || isOfType(node, 'Intermediate') ||
+                    isOfType(node, 'SubProcess')) {
                     nodes[id] = new Task(id, type);
                     if (isOfType(node, 'SubProcess')) {
                          nodes[id].setSubProcess(function (processes) {
