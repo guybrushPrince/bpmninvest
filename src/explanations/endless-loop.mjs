@@ -116,7 +116,7 @@ let explanation = function (panel, information, modeler) {
         simHandler.setDecisions(path);
     });
     simHandler.pauseIfExited(simInformation.split, (node) => {
-        message.append('<p>From this moment, there is an additional token that arrives at the exclusive gateway.</p>');
+        message.append('<p>From this moment, there is an additional token that arrives at the ' + joinLink + '.</p>');
     });
 
     simButton.on('click', function () {

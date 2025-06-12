@@ -95,7 +95,8 @@ let explanation = function (panel, information, modeler, process) {
     simHandler.setDecisions(pathToExit);
 
     simHandler.pauseIfExited(exit, (node) => {
-        message.append('<p>Starting from this situation, the token on the outgoing flow of the loop can never get back ' +
+        message.append('<p>Starting from this situation, the token on the outgoing flow of the loop exit ' + exitLink +
+                ' can never turn back ' +
             'into the loop.</p>');
     });
     if (exit.getKind === GatewayType.OR) {

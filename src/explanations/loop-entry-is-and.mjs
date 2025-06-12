@@ -109,7 +109,8 @@ let explanation = function (panel, information, modeler, process) {
         simHandler.setDecisions(pathToEntry);
 
         simHandler.pauseIfEntered(entry, (node) => {
-            message.append('<p>From this moment, the execution is locally blocked in the loop entry gateway.</p>');
+            message.append('<p>From this moment, the execution is locally blocked in the loop entry gateway ' +
+                entryLink + '.</p>');
         });
     }, false);
 

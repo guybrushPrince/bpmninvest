@@ -17,6 +17,7 @@ import {
 } from "./model.mjs";
 import { PAUSE_SIMULATION_EVENT, TRACE_EVENT } from "bpmn-js-token-simulation/lib/util/EventHelper.js";
 import {flatten} from "array-flatten";
+import {getBusinessObject} from "bpmn-js/lib/util/ModelUtil";
 
 let TokenSimulationHandling = function (modeler) {
 
@@ -26,6 +27,8 @@ let TokenSimulationHandling = function (modeler) {
         let elementRegistry = modeler.get('elementRegistry');
         let eventBus = modeler.get('eventBus');
         let pauseSimulation = modeler.get('pauseSimulation');
+
+        let controlledBoundaries = {};
 
         this.start = function () {
             eventBus.on(TRACE_EVENT, function(event) {
@@ -95,6 +98,20 @@ let TokenSimulationHandling = function (modeler) {
                     if (flow.length > 0) {
                         // We take the last flow since it is nearer to the target node.
                         simulator.setConfig(el, { activeOutgoing: flow.pop() });
+                    }
+                    let businessObject = getBusinessObject(el);
+                    if (businessObject && 'attachedToRef' in businessObject) {
+                        let ref = businessObject.attachedToRef;
+                        if (!(ref.id in controlledBoundaries)) {
+                            // We only send the boundary event once.
+                            this.controlElement(ref.id);
+                            controlledBoundaries[ref.id] = ref;
+                            let prom = simulationSupport.elementEnter(ref.id);
+                            prom.then(() => {
+                                this.controlElement(el.id);
+                                this.controlElement(ref.id);
+                            });
+                        }
                     }
                 }
             });
