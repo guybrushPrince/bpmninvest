@@ -71,7 +71,6 @@ const SoundnessVerifier = (function () {
             // This path could be reproduced to find the cause.
             andJoins.forEach(j => {
                 if (j.getId in info[j.getId]) {
-                    //let paths = determineTriggerLessPath(info, j);
                     let paths = determineTriggerPaths(process, j);
                     faultBus.addError(process, {
                         join: j,
@@ -214,7 +213,13 @@ const SoundnessVerifier = (function () {
             return L;
         };
 
-
+        /**
+         * Determine the information required for a simulation.
+         * @param process The current process model with the fault.
+         * @param join The deadlocking join.
+         * @param info The info collected during soundness checking.
+         * @returns {{path: (null|*), presetNode: null, others: {}, nonTriggers: *}}
+         */
         let determineDeadlockSimulationInformation = function (process, join, info) {
             // Try to find a path to any preset node of join, on which there is no
             // triggering node of the other preset nodes.
@@ -273,12 +278,25 @@ const SoundnessVerifier = (function () {
             };
         };
 
+        /**
+         * Determine the flaws of a deadlock to visualize them later as reason.
+         * A flaw is a set of nodes, which do not trigger an input of a join.
+         * @param process The current process model.
+         * @param paths The paths for each input of a join, which trigger the corresponding input.
+         * @param join The deadlocking join.
+         * @returns {*}
+         */
         let determineFlaws = function (process, paths, join) {
             return asList(join.getPreset).reduce((a,i) => {
+                // Create a copy of the path (set).
                 let path = union({}, paths[i.getId]);
+                // Iterate over each path (set) node ...
                 a[i.getId] = asList(path).reduce((flaws,p) => {
+                    // ... and find those, which do not trigger input node i of join.
+                    // These are those nodes NOT in the path set, who have at least one output IN the path set.
                     let nonTriggering = diff(p.getPreset, path);
                     asList(nonTriggering).forEach(nT => {
+                        // Add the flows between the non-trigger nodes as well the nodes themselves.
                         let flows = asList(nT.getOutgoing).filter(o => o.getTarget.getId in path);
                         flaws = union(flaws, asObject(flows));
                         flaws[nT.getId] = nT;
@@ -291,18 +309,29 @@ const SoundnessVerifier = (function () {
             }, {});
         }
 
+        /**
+         * Determine for all preset nodes of a "deadlocking" AND join, the subgraph (or "path) to them containing
+         * only nodes, which trigger the corresponding preset node.
+         * @param process The process model as object of Process.
+         * @param join The deadlocking AND join.
+         * @returns {{}}
+         */
         let determineTriggerPaths = function (process, join) {
+            // The resulting paths.
             let triggeredPaths = {};
 
+            // For the current process, get the trigger relation.
             let trig = triggers[process.getId];
+            // Consider each preset node of the AND join.
             asList(join.getPreset).forEach(i => {
-                let triggeredBy = Object.keys(trig).reduce((tB, node) => {
+                // Take each node of the process model in the triggering relation ...
+                triggeredPaths[i.getId] = Object.keys(trig).reduce((tB, node) => {
+                    // ... and check if it triggers the preset node i of the AND join.
                     if (i.getId in trig[node]) {
                         tB[node] = process.getNodes[node];
                     }
                     return tB;
                 }, {});
-                triggeredPaths[i.getId] = triggeredBy;
             });
 
             return triggeredPaths;
@@ -351,13 +380,19 @@ const SoundnessVerifier = (function () {
                         }
 
                         let fault = FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION;
-                        let pathFinder = PathFinderFactory();
+                        // There is a special case if the lack of synchronization appears in
+                        // a loop and there is no converging point for the diverging node.
                         if (sync.isConvergingEnd) {
                             fault = FaultType.POTENTIAL_ENDLESS_LOOP;
                         }
-                        let paths = findPathsToIntersectionPoint(split, syncPhisFine, sync, process);
+                        // Detect the disjoint paths to the faulty intersection point.
+                        let paths = findPathsToIntersectionPoint(split, syncPhisFine, sync);
                         let visited = {};
+                        let pathFinder = PathFinderFactory();
+                        // Iterate over the outputs of the split with a disjoint path ...
                         let pathsToSync = asList(syncPhisFine).reduce((p, post) => {
+                            // ... detect a path to the intersection point without crossing already
+                            // detected paths (being in *visited*).
                             let path = pathFinder.findPathFromStartToTarget(sync, process, paths[post.getId],
                                 visited, [ post ]);
                             if (path !== null) {
@@ -562,11 +597,21 @@ const SoundnessVerifier = (function () {
             return { order: reversePostOrder, numbers: postOrderNumbers };
         }
 
-        let findPathsToIntersectionPoint = function (split, postset, iPoint, process) {
-            // Go back from the intersection point to the split.
+        /**
+         * If an error was detected, there must be at least two disjoint paths from the
+         * diverging split to the intersection point. This method finds those paths.
+         * @param split The split.
+         * @param postset The outputs of split with disjoint paths to the intersection point.
+         * @param iPoint The intersection point.
+         * @returns {{}}
+         */
+        let findPathsToIntersectionPoint = function (split, postset, iPoint) {
+            // Go back from the intersection point to the split ...
             let visited = {};
             let list = [ iPoint ];
             while (list.length > 0) {
+                // ... and store all nodes visited. Since the investigated model is acyclic,
+                // this is possible.
                 let cur = list.shift();
                 visited[cur.getId] = cur;
                 if (cur.getId === split.getId) continue;
@@ -575,15 +620,20 @@ const SoundnessVerifier = (function () {
             }
 
             // Visited contains all nodes with a path to the intersection point.
+            // However, we only need those nodes, to which there is a path from the split
+            // to them.
             let paths = {};
+            // Take the outputs of the split being important for the intersection point as starts.
             let postList = asList(intersect(visited, postset));
             do {
+                // For each of those outputs ...
                 let curPostNode = postList.shift();
                 list = [ curPostNode ];
                 let path = {};
                 paths[curPostNode.getId] = path;
                 while (list.length > 0) {
                     let cur = list.shift();
+                    // ... find a path in the visited nodes to the intersection point.
                     path[cur.getId] = cur;
                     if (cur.getId === iPoint.getId) continue;
                     let next = intersect(visited, diff(cur.getPostset, path));
@@ -594,9 +644,6 @@ const SoundnessVerifier = (function () {
 
             return paths;
         };
-
-
-
 
     }
 

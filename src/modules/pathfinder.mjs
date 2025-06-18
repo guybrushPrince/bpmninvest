@@ -59,7 +59,7 @@ let PathFinderFactory = function(modeler = null) {
                 let supProcess = process.getSuper;
                 let targetNodes = asList(supProcess.getNodes).filter(n =>
                     (n instanceof LoopTask && n.getLoop.getId === process.getId) ||
-                    (n instanceof Task && n.getSubProcess.getId === process.getId)
+                    (n instanceof Task && n.getSubProcess !== null && n.getSubProcess.getId === process.getId)
                 );
 
                 let superPath = this.findPathFromStartToTarget(targetNodes.shift(), supProcess);
