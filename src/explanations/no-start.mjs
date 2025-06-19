@@ -11,7 +11,7 @@ let explanation = function (panel) {
     panel.append('<p>Your process model does not contain any explicit or implicit starting point. For this ' +
         'reason, it cannot be successfully executed.</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>Please re-investigate your process model to identify places where your process model shall ' +
         'start. On such places, you either insert a <em>Start Event</em> or another node without incoming ' +
         'sequence flows.' +

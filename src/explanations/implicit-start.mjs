@@ -29,7 +29,7 @@ let explanation = function (panel, information, modeler) {
         'have modelled as a <a data-element-link=\'' + JSON.stringify(asList(implicitStart.elementIds)) + '\'>' +
         type  + '</a>.</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>' +
         'Please insert an <em>explicit start event</em> before the <em>implicit start event</em>. If your process ' +
         'model contains multiple <em>start event</em>s now, ensure that you combine those <em>start event</em>s, ' +

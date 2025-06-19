@@ -15,6 +15,7 @@ import { explanation as backJoinExplanation } from '../explanations/back-join-is
 import { PathFinderFactory } from "./pathfinder.mjs";
 import { flatten } from "array-flatten";
 
+// CSS classes for highlighting BPMN elements.
 const VisClasses = {
     INFO_LINE: 'info-line',
     WARNING_LINE: 'warning-line',
@@ -34,6 +35,7 @@ const VisClasses = {
     HIGHLIGHT: 'highlight'
 };
 
+// Texts being displayed in the editor.
 const Texts = {
     NO_START: 'No explicit or implicit start event',
     NO_END: 'No explicit or implicit end event',

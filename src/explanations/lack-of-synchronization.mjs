@@ -56,7 +56,7 @@ let explanation = function (panel, information, modeler) {
         'Via those paths, two concurrent control flows may reach the gateway and cause undesired behavior subsequently.' +
         '</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>If the concurrency is desired, you should think about the strong black lined paths whether they ' +
         'represent your process model correctly. One solution may be to converge the concurrent control flows earlier' +
         'in your process model.</p>')

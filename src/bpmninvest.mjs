@@ -20,7 +20,7 @@ import { SCC } from "./modules/scc.mjs";
 import { Normalizer } from "./modules/normalize.mjs";
 import { Visualizer } from "./modules/visualizer.mjs";
 
-import diagramXML from './example/example.bpmn';
+import emptyDiagramXML from './example/empty.bpmn';
 import { faultBus } from "./modules/faultbus.mjs";
 
 
@@ -40,6 +40,7 @@ let eventBus = modeler.get('eventBus');
 let analyzeSoundness = (function() {
     let vis = null;
     return async function() {
+        const startTime = performance.now()
         // Initialize the visualizer
         if (vis !== null) vis.destruct();
         vis = Visualizer();
@@ -53,6 +54,8 @@ let analyzeSoundness = (function() {
                 )
             )
         );
+        const endTime = performance.now()
+        console.log('BPMNinvest, time for analysis:', (endTime - startTime) + ' [ms]');
     };
 })();
 
@@ -65,7 +68,7 @@ eventBus.on('elements.changed', function(context) {
 });
 
 function createNewDiagram() {
-    openDiagram(diagramXML);
+    openDiagram(emptyDiagramXML);
 }
 
 async function openDiagram(xml) {

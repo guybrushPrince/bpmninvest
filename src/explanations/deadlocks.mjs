@@ -46,7 +46,7 @@ let explanation = function (panel, information, modeler) {
         joinLink + '.</p>');
 
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>The pulsating elements hinder (maybe through decisions) whether your ' + joinLink + ' is ' +
         'executed or not. Is it possible to replace them with a diverging parallel gateway? Is your ' +
         joinLink + ' really necessary or do you have only mutually exclusive paths? Although not recommended, ' +

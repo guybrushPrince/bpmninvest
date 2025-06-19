@@ -38,7 +38,7 @@ let explanation = function (panel, information, modeler, process) {
         'each iteration of the loop. Without another flaw in your process model, there is at least one instance ' +
         'of your process model, in which it blocks locally at this entry.' + '</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>If possible, replace the loop entry with a parallel or inclusive gateway and check subsequently ' +
         'if your process model still has the desired behavior.</p>');
 

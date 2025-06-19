@@ -29,7 +29,7 @@ let explanation = function (panel, information, modeler) {
         'have modelled as a <a data-element-link=\'' + JSON.stringify(asList(implicitEnd.elementIds)) + '\'>' +
         type  + '</a>.</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>' +
         'Please insert an <em>explicit end event</em> after the <em>implicit end Event</em>.' +
         '</p>');

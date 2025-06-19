@@ -62,7 +62,7 @@ let explanation = function (panel, information, modeler) {
         'behavior subsequently.' + '</p>');
 
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>If the concurrency is desired, please converge them before reaching the loop exit ' +
         joinLink + '.</p>');
 

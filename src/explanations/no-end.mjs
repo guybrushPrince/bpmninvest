@@ -12,7 +12,7 @@ let explanation = function (panel) {
         'As a consequence, any execution finally leads to an endless loop repeating the same tasks again and again. ' +
         'For this reason, the process model can never successfully terminate.</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>Please re-investigate your process model to identify places where your process model shall ' +
         'terminate. On such places, you either insert an <em>End Event</em> or another node without outgoing ' +
         'sequence flows.' +

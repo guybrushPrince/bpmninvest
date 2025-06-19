@@ -41,7 +41,7 @@ let explanation = function (panel, information, modeler, process) {
         'synchronized subsequently.' +
         '</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>If possible, replace the loop exit with an exclusive gateway and check subsequently if your ' +
         'process model still has the desired behavior.</p>');
 

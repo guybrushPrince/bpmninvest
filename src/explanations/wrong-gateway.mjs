@@ -51,7 +51,7 @@ let explanation = function (panel, information, modeler) {
     }
 
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     if (inFlows === 0) {
         panel.append('<p>Please insert an incoming flow to your ' + link + ', e.g., from another element.</p>');
     } else if (inFlows >= 2) {

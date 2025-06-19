@@ -39,7 +39,7 @@ let explanation = function (panel, information, modeler, process) {
         'the initialation phasis of the loop. Without another flaw in your process model, there is at least one ' +
         'instance of your process model, in which it blocks locally at this ' + backJoinLink + '.</p>');
 
-    panel.append('<h2>Proposals for repairment</h2>');
+    panel.append('<h2>Repair suggestions</h2>');
     panel.append('<p>The main question you should ask yourself is: Is it necessary at all to converge the flows ' +
         'before a loop entry? If it is unnecessary, try to avoid such a convergence within a loop as it complicates ' +
         'the understanding of your process model. If it is necessary, then there are three main proposals to repair ' +
