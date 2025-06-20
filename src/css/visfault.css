@@ -110,11 +110,12 @@
 }
 .d-panel #close-panel {
     position: fixed;
-    right: 5px;
+    right: 20px;
     top: 5px;
     width: 25px;
     height: 25px;
     cursor: pointer;
+    padding: 0;
 }
 .d-panel .simulation-hint:empty {
     display: none;

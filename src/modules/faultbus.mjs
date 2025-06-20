@@ -61,6 +61,9 @@ const faultBus = (function () {
                 observer.notify(type, process, elements, fault);
             });
         };
+        this.clear = function () {
+            this.observers = [];
+        };
     }
     return new FaultBus();
 })();

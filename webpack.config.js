@@ -14,12 +14,18 @@ module.exports = {
                 test: /\.css$/,
                 use: [
                     'style-loader',
-                    'css-loader',
+                    'css-loader'
                 ]
             },
             {
                 test: /\.bpmn$/,
                 use: 'raw-loader'
+            },
+            {
+                test: /\.png$/,
+                use: {
+                    loader: 'url-loader'
+                }
             },
             {
                 test: /\.m?js/, // fix:issue: https://github.com/webpack/webpack/issues/11467

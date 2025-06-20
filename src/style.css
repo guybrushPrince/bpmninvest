@@ -1,13 +1,14 @@
 * {
     box-sizing: border-box;
 }
+:root {
+    --color-property--fulfilled: #008000ff;
+    --color-property--violated: #ff0000ff;
+}
 
 body, html {
-
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-
     font-size: 12px;
-
     height: 100%;
     padding: 0;
     margin: 0;
@@ -15,6 +16,18 @@ body, html {
 
 a:link {
     text-decoration: none;
+}
+
+select {
+    font-size: 13px;
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    display: inline-block;
+    padding: 6px 10px;
+    font-weight: bold;
+    text-align: left;
+    border: solid 1px #cdcdcd;
 }
 
 .content,
@@ -26,7 +39,11 @@ a:link {
 
 .content > .message {
     text-align: center;
-    display: table;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
 
     font-size: 16px;
     color: #111;
@@ -35,7 +52,13 @@ a:link {
 .content > .message .note {
     vertical-align: middle;
     text-align: center;
-    display: table-cell;
+    display: block;
+    width: 50%;
+    font-size: 16px;
+}
+
+#BPMNinvest-logo > img {
+    width: 400px;
 }
 
 .content > .error .details {
@@ -56,6 +79,9 @@ a:link {
 .content.with-diagram > .intro {
     display: none;
 }
+.content:not(.with-diagram) ~ .analysis {
+    display: none;
+}
 
 
 .content .canvas,
@@ -67,31 +93,136 @@ a:link {
     visibility: visible;
 }
 
-.buttons {
+.button-row {
     position: fixed;
-    bottom: 20px;
     left: 20px;
 
     padding: 0;
     margin: 0;
     list-style: none;
 }
+.button-row.download {
+    bottom: 20px;
+}
+.button-row.open {
+    bottom: 60px;
+}
 
-.buttons > li {
+.button-row > li {
     display: inline-block;
     margin-right: 10px;
+    font-size: 14px;
 }
-.buttons > li > a {
-    background: #DDD;
-    border: solid 1px #666;
+.button-row > li > a,
+.button-row > li > button,
+.d-panel > button {
+    color: black;
+    background-color: #f8f8f8;
+    border-radius: 3px;
     display: inline-block;
-    padding: 5px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    border: solid 1px #cdcdcd;
 }
 
-.buttons a {
+.button-row a,
+.button-row button {
     opacity: 0.3;
+    text-decoration: none;
+    cursor: not-allowed;
 }
 
-.buttons a.active {
-    opacity: 1.0;
+.button-row a.active,
+.button-row button.active,
+.d-panel button {
+    opacity: 1;
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+.examples {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    font-size: 14px;
+    gap: 10px
+}
+
+.examples select {
+    max-width: 250px;
+}
+
+
+@font-face {
+    font-family: "Font Awesome 5 Free Solid";
+    src: url("./css/font-awesome-5/fa.eot"); /* IE9*/
+    src: url("./css/font-awesome-5/fa.eot?#iefix") format("embedded-opentype"),
+         /* IE6-IE8 */ url("./css/font-awesome-5/fa.woff2") format("woff2"),
+         /* chrome、firefox */ url("./css/font-awesome-5/fa.woff") format("woff"),
+         /* chrome、firefox */ url("./css/font-awesome-5/fa.ttf") format("truetype"),
+         /* chrome、firefox、opera、Safari, Android, iOS 4.2+*/
+         url("./css/font-awesome-5/fa.svg#Font Awesome 5 Free Solid") format("svg"); /* iOS 4.1- */
+}
+
+.analysis {
+    display: grid;
+    grid-template-columns: 1fr 20px;
+    grid-column-gap: 15px;
+    grid-row-gap: 5px;
+    align-items: center;
+
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: bold;
+    border: solid 1px #cdcdcd;
+
+    bottom: -50px;
+    left: 50%;
+    padding: 5px;
+    position: fixed;
+    transform: translate(-50%, -50%);
+}
+
+.fulfilled {
+    color: var(--color-property--fulfilled);
+}
+
+.violated {
+    color: var(--color-property--violated);
+}
+
+.general-icon.icon-check::before {
+    content: "\e804";
+}
+
+.general-icon.icon-xmark::before {
+    content: "\e800";
+}
+
+[class*="general-icon"]::before {
+    font-style: normal;
+    font-weight: normal;
+    speak: none;
+    display: inline-block;
+    text-decoration: inherit;
+    text-align: center;
+    font-variant: normal;
+    text-transform: none;
+}
+
+.general-icon {
+    font-family: "Font Awesome 5 Free Solid", serif;
+    line-height: 1.2em;
+    box-sizing: border-box;
+    font-size: 18px;
 }

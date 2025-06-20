@@ -42,6 +42,10 @@ let TokenSimulationHandling = function (modeler) {
             simulationSupport.toggleSimulation(true);
         };
 
+        this.pause = function() {
+            pauseSimulation.pause();
+        };
+
         this.stop = function () {
             eventBus.off(TRACE_EVENT);
             simulationSupport.toggleSimulation(false);
