@@ -110,7 +110,9 @@ let SCC = function () {
                     // DOI: https://doi.org/10.1016/j.is.2024.102476
                     //
                     // loop entries must be "XOR" (or "OR") and loop exits must be "XOR"
-                    asList(component.getExits).forEach(exit => {
+                    let exits = asList(component.getExits);
+                    let entries = asList(component.getEntries);
+                    exits.forEach(exit => {
                         if (exit instanceof Gateway && exit.getKind !== GatewayType.XOR) {
                             let pathFinder = PathFinderFactory();
                             let pathToExit = pathFinder.findPathFromStartToTarget(exit, process);
@@ -131,7 +133,7 @@ let SCC = function () {
                             );
                         }
                     });
-                    asList(component.getEntries).forEach(entry => {
+                    entries.forEach(entry => {
                         if (entry instanceof Gateway && entry.getKind === GatewayType.AND) {
                             // We find a path to any exit that we force to execute.
                             let exit = asList(intersect(component.getExits, component.getDoBody)).shift();
@@ -161,6 +163,44 @@ let SCC = function () {
                             );
                         }
                     });
+                    // By
+                    //
+                    // Prinz, T. M., Choi, Y. & Ha, N. L. (2024).
+                    // Soundness unknotted: An efficient soundness checking algorithm for arbitrary cyclic process models by loosening loops.
+                    // DOI: https://doi.org/10.1016/j.is.2024.102476
+                    //
+                    // Loops are bad structured if they do not have an entry (dead loop) or exit (live lock)
+                    if (entries.length === 0) {
+                        component.setDead(true);
+                        let refExit = (exits.length >= 1) ? exits[0] : null;
+                        faultBus.addError(
+                            process,
+                            {
+                                loop: component.copy(),
+                                refExit: refExit // Nothing to simulate
+                            },
+                            FaultType.DEAD_LOOP
+                        );
+                    }
+                    if (exits.length === 0 && entries.length >= 1) {
+                        let refEntry = entries[0];
+                        let pathToEntry = null;
+                        let pathFinder = PathFinderFactory();
+                        pathToEntry = pathFinder.findPathFromStartToTarget(refEntry, process);
+                        if (pathToEntry !== null) pathToEntry = pathFinder.modelPathToBPMNPath(pathToEntry);
+                        faultBus.addError(
+                            process,
+                            {
+                                loop: component.copy(),
+                                refEntry: refEntry,
+                                simulation: {
+                                    pathToEntry: pathToEntry,
+                                    entry: refEntry
+                                }
+                            },
+                            FaultType.LIVE_LOCK
+                        );
+                    }
 
                     components.push(component);
                 }

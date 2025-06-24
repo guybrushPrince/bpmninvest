@@ -41,7 +41,7 @@ class UIModel {
     }
 }
 class BPMNModel extends UIModel {
-    #processes = {};
+    #processes = [];
     #messages = {};
 
     get getProcesses() {
@@ -283,13 +283,15 @@ const GatewayType = {
 class Gateway extends Node {
     #kind;
     #divergingStart = false;
-    #converingEnd = false;
+    #convergingEnd = false;
     constructor(id, type, kind = null) {
         super(id, type);
         if (kind === null) {
             if (type.startsWith('bpmn:Parallel')) this.#kind = GatewayType.AND;
             else if (type.startsWith('bpmn:Exclusive')) this.#kind = GatewayType.XOR;
             else if (type.startsWith('bpmn:Inclusive')) this.#kind = GatewayType.OR;
+            else if (type.startsWith('bpmn:Event')) this.#kind = GatewayType.XOR;
+            else if (type.startsWith('bpmn:Complex')) this.#kind = GatewayType.OR;
         } else this.#kind = kind;
     }
 
@@ -300,8 +302,8 @@ class Gateway extends Node {
         this.#kind = kind;
     }
 
-    setConvergingEnd(conEnd) { this.#converingEnd = conEnd; }
-    get isConvergingEnd() { return this.#converingEnd; }
+    setConvergingEnd(conEnd) { this.#convergingEnd = conEnd; }
+    get isConvergingEnd() { return this.#convergingEnd; }
 
     setDivergingStart(divStart) { this.#divergingStart = divStart; }
     get isDivergingStart() { return this.#divergingStart; }
@@ -435,6 +437,7 @@ class Loop extends UIModel {
     #edges = null;
     #doBody = null;
     #process = null;
+    #dead = false;
     constructor(id, process) {
         super(id);
         this.#process = process;
@@ -483,6 +486,10 @@ class Loop extends UIModel {
     addExits(exits) {
         this.#exits = union(this.#exits, exits);
     }
+    setDead(dead) {
+        this.#dead = dead;
+    }
+    get isDead() { return this.#dead; }
     setProcess(process) {
         this.#process = process;
     }

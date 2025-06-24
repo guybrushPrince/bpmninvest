@@ -71,6 +71,7 @@ const LoopDecomposition = (function () {
             }
 
             // Else ...
+            removeDeadLoops(process);
             let fragments = decomposeLoops(process);
             let allFragments = {};
             for (let fragment of asList(fragments)) {
@@ -325,6 +326,45 @@ const LoopDecomposition = (function () {
             Normalizer.normalizeProcess(process, false);
 
             return processes;
+        }
+
+        let removeDeadLoops = function (process) {
+            let dead = {};
+            let liveLoops = process.getLoops.filter(loop => {
+                if (!loop.isDead && asList(loop.getExits).length >= 1) return true;
+
+                asList(loop.getNodes).forEach(n => {
+                    delete process.getNodes[n.getId];
+                    asList(union(n.getIncoming, n.getOutgoing)).forEach(e => {
+                        dead[e.getSource.getId] = e.getSource;
+                        dead[e.getTarget.getId] = e.getTarget;
+                        delete process.getEdges[e.getId];
+                    });
+                });
+
+                return false;
+            });
+            process.setLoops(liveLoops);
+            process.computeInOut();
+            // Remove dead nodes and edges
+            do {
+                dead = intersect(dead, process.getNodes);
+                if (asList(dead).length > 0) {
+                    let deadNode = asList(dead).shift();
+                    delete dead[deadNode.getId];
+                    if (asList(deadNode.getIncoming).length === 0) {
+                        // It is really dead.
+                        delete process.getNodes[deadNode.getId];
+                        asList(deadNode.getOutgoing).forEach(o => {
+                            let t = o.getTarget;
+                            delete t.getIncoming[o.getId];
+                            delete process.getEdges[o.getId];
+                            dead[t.getId] = t;
+                        });
+                    }
+                }
+            } while (asList(dead).length > 0);
+            process.computeInOut();
         }
     }
 

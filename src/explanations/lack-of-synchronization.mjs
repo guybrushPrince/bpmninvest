@@ -1,9 +1,8 @@
 import { GatewayType } from "../modules/model.mjs";
-import {asList, asObject} from "../modules/settools.mjs";
+import { asList, asObject } from "../modules/settools.mjs";
 import $ from "jquery";
-import {TokenSimulationHandling} from "../modules/simsupport.mjs";
-import {flatten} from "array-flatten";
-import {PathFinderFactory} from "../modules/pathfinder.mjs";
+import { TokenSimulationHandling } from "../modules/simsupport.mjs";
+import { PathFinderFactory } from "../modules/pathfinder.mjs";
 
 let explanation = function (panel, information, modeler) {
 
@@ -28,7 +27,7 @@ let explanation = function (panel, information, modeler) {
         'the exclusive gateway is executed twice (once for each control flow) and all following tasks are executed ' +
         'twice as well.</p>');
     panel.append('<p>In general, such an improper synchronization hinders a proper completion of a process model and, ' +
-        'sometimes, the option to complete - both considered as bad practice.')
+        'sometimes, the option to complete - both considered as bad practice.</p>')
 
 
     panel.append('<h2>Flaw in your process model</h2>');
@@ -61,7 +60,7 @@ let explanation = function (panel, information, modeler) {
         'represent your process model correctly. One solution may be to converge the concurrent control flows earlier' +
         'in your process model.</p>')
     panel.append('<p>If your workflow management system allows for using inclusive gateways, another solution is to ' +
-        'replace the ' + joinLink + ' with a converging inclusive gateway.');
+        'replace the ' + joinLink + ' with a converging inclusive gateway.</p>');
 
 
     panel.append('<h2>Simulation (Experimental)</h2>');

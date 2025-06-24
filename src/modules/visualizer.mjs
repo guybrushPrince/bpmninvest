@@ -12,6 +12,8 @@ import { explanation as deadlockExplanation } from '../explanations/deadlocks.mj
 import { explanation as lackOfSynchronizationExplanation } from '../explanations/lack-of-synchronization.mjs';
 import { explanation as endlessLoopExplanation } from '../explanations/endless-loop.mjs';
 import { explanation as backJoinExplanation } from '../explanations/back-join-is-and.mjs';
+import { explanation as liveLockExplanation } from '../explanations/live-lock.mjs';
+import { explanation as deadLoopExplanation } from '../explanations/dead-loop.mjs';
 import { PathFinderFactory } from "./pathfinder.mjs";
 import { flatten } from "array-flatten";
 
@@ -47,7 +49,9 @@ const Texts = {
     LOOP_BACK_JOIN_IS_AND: 'Possible deadlock',
     POTENTIAL_DEADLOCK: 'Possible deadlock',
     POTENTIAL_LACK_OF_SYNCHRONIZATION: 'Possible missing synchronization',
-    POTENTIAL_ENDLESS_LOOP: 'Possible endless loop'
+    POTENTIAL_ENDLESS_LOOP: 'Possible endless loop',
+    LIVE_LOCK: 'Endless loop',
+    DEAD_LOOP: 'Dead loop'
 };
 
 const Visualizer = (function () {
@@ -119,6 +123,12 @@ const Visualizer = (function () {
                 } break;
                 case FaultType.POTENTIAL_ENDLESS_LOOP: {
                     visualizePotentialEndlessLoop(type, elements, process);
+                } break;
+                case FaultType.LIVE_LOCK: {
+                    visualizeLiveLock(type, elements, process);
+                } break;
+                case FaultType.DEAD_LOOP: {
+                    visualizeDeadLoop(type, elements, process);
                 } break;
             }
             informAnalysisPanel(fault);
@@ -306,6 +316,36 @@ const Visualizer = (function () {
             }, () => { closerAction(); });
         };
 
+        let visualizeLiveLock = function (type, elements, process) {
+            let loopModel = elements.loop;
+            let entry = elements.refEntry;
+            addClass(entry.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+            let closerAction = () => {};
+            addOverlay(entry.getUI$, type, Texts.LIVE_LOCK, (panel) => {
+                fadeOut();
+                let causeUI = entry.getUI$;
+                addClass(causeUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
+                    VisClasses.NON_FADE);
+                addClass(mapToUI(union(loopModel.getNodes, loopModel.getEdges)), VisClasses.NON_FADE, true);
+
+                closerAction = liveLockExplanation(panel, elements, modelerInstance);
+            }, () => { closerAction(); });
+        };
+
+        let visualizeDeadLoop = function (type, elements, process) {
+            let loopModel = elements.loop;
+            let loop = mapToUI(union(loopModel.getNodes, loopModel.getEdges));
+            addClass(loop, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+            let representative = asList(loopModel.getNodes)[0];
+            addOverlay(representative.getUI$, type, Texts.DEAD_LOOP, (panel) => {
+                fadeOut();
+                addClass(loop, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
+                    VisClasses.NON_FADE);
+
+                deadLoopExplanation(panel, elements, modelerInstance);
+            }, () => { });
+        };
+
         let addOverlay = function (ui, type, text, detailAction = () => {}, detailClose = () => {}, show = false) {
             ui.toArray().forEach(u => {
                 let id = $(u).data('element-id');
@@ -428,6 +468,19 @@ const Visualizer = (function () {
                     setAnalysisPanel([
                         'safeness',
                         'properCompletion'
+                    ]);
+                } break;
+                case FaultType.LIVE_LOCK: {
+                    setAnalysisPanel([
+                        'properCompletion',
+                        'optionToComplete',
+                        'bestPractices'
+                    ]);
+                } break;
+                case FaultType.DEAD_LOOP: {
+                    setAnalysisPanel([
+                        'noDeadActivities',
+                        'bestPractices'
                     ]);
                 } break;
             }

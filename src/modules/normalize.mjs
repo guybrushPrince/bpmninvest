@@ -10,7 +10,7 @@
  */
 import { FaultType, faultBus  } from "./faultbus.mjs";
 import { BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask } from "./model.mjs";
-import {asList, union} from "./settools.mjs";
+import {asList, diff, intersect, union} from "./settools.mjs";
 import {flatten} from "array-flatten";
 import {PathFinderFactory} from "./pathfinder.mjs";
 
@@ -27,7 +27,14 @@ const Normalizer = (function () {
             if (!Array.isArray(bpmn)) bpmn = [bpmn];
             bpmn.forEach((bpmn) => {
                 if (bpmn instanceof BPMNModel) {
-                    bpmn.getProcesses.forEach((p) => this.normalizeProcess(p, withFaults));
+                    let all = bpmn.getProcesses.reduce((all, p) => {
+                        p.computeInOut();
+                        let connected = findConnectedComponents(p);
+                        connected.forEach((p) => this.normalizeProcess(p, withFaults));
+                        all = all.concat(connected);
+                        return all;
+                    }, []);
+                    bpmn.setProcesses(all);
                 }
             });
             return bpmn;
@@ -58,9 +65,46 @@ const Normalizer = (function () {
             }
         };
 
+        let findConnectedComponents = function (process) {
+            let components = [];
+            let nodes = union({}, process.getNodes);
+            if (asList(nodes).length === 0) return [ process ];
+            while (asList(nodes).length > 0) {
+                let first = asList(nodes).shift();
+                let component = {};
+                let next = {};
+                next[first.getId] = first;
+                do {
+                    let cur = asList(next).shift();
+                    delete next[cur.getId];
+                    delete nodes[cur.getId];
+                    component[cur.getId] = cur;
+                    next = union(next, intersect(union(cur.getPreset, cur.getPostset), nodes));
+                } while (asList(next).length > 0);
+                if (components.length === 0 && asList(process.getNodes).length === asList(component).length) {
+                    // Everything is fine (the graph is connected).
+                    return [ process ];
+                } else {
+                    // Create a new process model
+                    let p = new Process(process.getId + '_' + components.length);
+                    p.setNodes(component);
+                    p.setUI(process.getUI);
+                    p.addElementId(process.elementIds);
+                    p.setEdges(asList(process.getEdges).reduce((ed, e) => {
+                        if (e.getSource.getId in component && e.getTarget.getId in component) {
+                            ed[e.getId] = e;
+                        }
+                        return ed;
+                    }, {}));
+                    components.push(p);
+                }
+            }
+            return components;
+        }
+
         let normalizeSingletonProcess = function (process) {
             // If there is a process model with just a single node ...
-            if (process.getNodes.length === 1) {
+            if (asList(process.getNodes).length === 1) {
                 // ... add one to have a process with start and end.
                 let newNode;
                 let newEdge;
