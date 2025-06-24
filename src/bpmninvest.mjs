@@ -24,6 +24,7 @@ import { Normalizer } from "./modules/normalize.mjs";
 import { Visualizer } from "./modules/visualizer.mjs";
 
 import emptyDiagramXML from './example/empty.bpmn';
+import exampleDiagramXML from './example/example.bpmn';
 import faultMasking from './example/fault-masking.bpmn';
 import faultBlocking from './example/fault-blocking.bpmn';
 import faultIllusion from './example/fault-illusion.bpmn';
@@ -254,7 +255,7 @@ $(function () {
     exampleSelector.on('change', function (e) {
         switch ($(this).val()) {
             case 'example.bpmn': {
-                openDiagram(exampleXML);
+                openDiagram(exampleDiagramXML);
             } break;
             case "fault-masking.bpmn": {
                 openDiagram(faultMasking);
