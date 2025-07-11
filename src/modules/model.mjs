@@ -155,7 +155,7 @@ class Process extends UIModel {
     }
 
     asDot() {
-        let c = 'subgraph cluster_' + this.getId.replaceAll('-', '_') + ' {';
+        let c = 'digraph cluster_' + this.getId.replaceAll('-', '_') + ' {';
         c += asList(this.#nodes).map((n) => n.asDot()).join("\n");
         c += asList(this.#edges).map((e) => e.asDot()).join("\n");
         c += '}';
@@ -216,7 +216,7 @@ class Node extends UIModel {
     }
 
     asDot() {
-        return 'node' + this.getId.replaceAll('-', '_') + '[shape=box,label="Activity"];';
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=box,label="Activity - ' + this.getId.replaceAll('-', '_') + '"];';
     }
 }
 
@@ -257,7 +257,7 @@ class VirtualTask extends Node {
     }
 
     asDot() {
-        return 'node' + this.getId.replaceAll('-', '_') + '[shape=egg,label="Virtual"];';
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=egg,label="Virtual-' + this.getId.replaceAll('-', '_') + '"];';
     }
 }
 
@@ -316,7 +316,7 @@ class Gateway extends Node {
     }
 
     asDot() {
-        return 'node' + this.getId.replaceAll('-', '_') + '[shape=diamond,label="' + this.#kind + '"];';
+        return 'node' + this.getId.replaceAll('-', '_') + '[shape=diamond,label="' + this.#kind + '-' + this.getId.replaceAll('-', '_') + '"];';
     }
 }
 class LoopEntryGateway extends Gateway {

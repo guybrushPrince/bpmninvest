@@ -9,7 +9,7 @@
  * 6. Add tasks between directly connected gateways.
  */
 import { FaultType, faultBus  } from "./faultbus.mjs";
-import { BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask } from "./model.mjs";
+import {BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask, LoopProcess} from "./model.mjs";
 import {asList, diff, intersect, union} from "./settools.mjs";
 import {flatten} from "array-flatten";
 import {PathFinderFactory} from "./pathfinder.mjs";
@@ -41,6 +41,7 @@ const Normalizer = (function () {
         };
         this.normalizeProcess = function (process, withFaults = true) {
             if (process instanceof Process) {
+                if (!withFaults && asList(process.getNodes).length === 0) return;
                 normalizeSingletonProcess(process);
                 process.computeInOut();
                 normalizeBoundaryEvents(process);
@@ -305,7 +306,7 @@ const Normalizer = (function () {
                 or = new Gateway('n' + elementId++, null, (withFaults ? GatewayType.OR : GatewayType.XOR));
                 or.setUI(ends.map((e) => e.getUI));
                 or.addElementId(flatten(ends.map((e) => e.elementIds)));
-                if (!withFaults) or.setConvergingEnd(true);
+                if (!withFaults && process instanceof LoopProcess) or.setConvergingEnd(true);
                 process.addNode(or);
                 ends.forEach(function (end) {
                     if (end instanceof End && asList(end.getIncoming).length >= 2) {

@@ -23,6 +23,7 @@ const SoundnessVerifier = (function () {
             if (typeof acyclicProcesses === 'object') acyclicProcesses = asList(acyclicProcesses);
             if (!Array.isArray(acyclicProcesses)) acyclicProcesses = [ acyclicProcesses ];
             acyclicProcesses.forEach((process) => {
+                if (asList(process.getNodes).length === 0) return;
                 checkDeadlocks(process);
                 checkLacksOfSynchronization(process);
             });
@@ -378,6 +379,7 @@ const SoundnessVerifier = (function () {
                             }
                             syncPhisFine[n.getId] = n;
                         }
+                        if (asList(syncPhisFine).length < 2) continue;
 
                         let fault = FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION;
                         // There is a special case if the lack of synchronization appears in

@@ -152,6 +152,10 @@
     stroke: var(--stroke-color) !important;
     fill: var(--stroke-color) !important;
 }
+.vis-line .djs-connection > .djs-visual > path {
+    stroke: var(--stroke-color) !important;
+    fill: none !important;
+}
 .vis-line.djs-connection .djs-visual path {
     stroke: var(--stroke-color) !important;
 }
