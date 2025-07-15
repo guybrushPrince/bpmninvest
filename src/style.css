@@ -60,6 +60,30 @@ select {
 #BPMNinvest-logo > img {
     width: 400px;
 }
+#fsu-logo {
+    position: fixed;
+    bottom: 13px;
+    right: 90px;
+    z-index: 100;
+}
+#fsu-logo > img {
+    width: 53px;
+}
+#my-name {
+    color: rgba(0, 47, 93, 1.0);
+    position: fixed;
+    bottom: 14px;
+    right: 165px;
+    z-index: 100;
+    width: 53px;
+    letter-spacing: -1px;
+    font-weight: bold;
+    font-size: 11px;
+    text-align: center;
+}
+#my-name:hover {
+    text-decoration: underline;
+}
 
 .content > .error .details {
     max-width: 500px;

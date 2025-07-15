@@ -8,6 +8,7 @@ import './style.css';
 import './css/visfault.css';
 
 import Logo from './pic/BPMNinvest.png';
+import FSULogo from './pic/Wortmarke_blue_5.png';
 
 import $ from 'jquery';
 
@@ -198,6 +199,7 @@ $(function () {
     let newBPMN = $('#js-new-diagram');
     let exampleSelector = $('#examples-opener');
     let logo = $('#BPMNinvest-logo');
+    let fsuLogo = $('#fsu-logo');
 
     $('.buttons a').click(function (e) {
         if (!$(this).is('.active')) {
@@ -241,6 +243,7 @@ $(function () {
     modeler.on('commandStack.changed', exportArtifacts);
 
     logo.append($('<img src="' + Logo + '" alt="Logo of BPMNinvest showing a magnifier">'));
+    fsuLogo.append($('<img src="' + FSULogo + '" alt="Logo of the Friedrich Schiller University Jena, Germany">'));
 
     openFile.on('click', function () {
         fileInput.value = "";
