@@ -52,12 +52,14 @@ import deadTasksConnected from './example/bpmnanalyzer/dead_tasks_connected.bpmn
 import orderHandling from './example/bpmnanalyzer/order_handling.bpmn';
 
 import { faultBus } from "./modules/faultbus.mjs";
+import {ToggleOffIcon, ToggleOnIcon} from "bpmn-js-token-simulation/lib/icons/index.js";
 
 
+// Create a container where files can be dropped on to be opened.
+let container = $('#js-drop-zone');
 
-var container = $('#js-drop-zone');
-
-var modeler = new BpmnModeler({
+// Create a new BPMN modeler based on bpmn.io
+let modeler = new BpmnModeler({
     container: '#js-canvas',
     additionalModules: [
         TokenSimulationModule,
@@ -65,9 +67,16 @@ var modeler = new BpmnModeler({
     ]
 });
 
+// Get the event bus to start the soundness checking on each change of the model.
 let eventBus = modeler.get('eventBus');
 
+// Each soundness checking routine has a visualizer highlighting the errors in the model.
+// If there is any change, the last visualizer has to be destructed.
 let lastVisualizer = null;
+
+let enabledAnalysis = true;
+
+// The function to start analyzing soundness.
 let analyzeSoundness = (function() {
     return async function() {
         const startTime = performance.now()
@@ -92,14 +101,18 @@ let analyzeSoundness = (function() {
     };
 })();
 
+// Register the soundness analysis on any change of the model.
 eventBus.on('elements.changed', function(context) {
     try {
-        analyzeSoundness();
+        if (enabledAnalysis) analyzeSoundness();
     } catch (exception) {
         console.error(exception);
     }
 });
 
+/**
+ * Create a new diagram with new UUIDs.
+ */
 function createNewDiagram() {
     let processId = uuidv4();
     let diagramId = uuidv4();
@@ -110,13 +123,18 @@ function createNewDiagram() {
     openDiagram(xml);
 }
 
+/**
+ * Open a BPMN model (diagram).
+ * @param xml A string containing XML code.
+ * @returns {Promise<void>}
+ */
 async function openDiagram(xml) {
     if (lastVisualizer !== null) lastVisualizer.destruct();
     lastVisualizer = null;
     faultBus.clear();
     try {
         await modeler.importXML(xml);
-        analyzeSoundness();
+        if (enabledAnalysis) analyzeSoundness();
 
         container
             .removeClass('with-error')
@@ -131,6 +149,11 @@ async function openDiagram(xml) {
     }
 }
 
+/**
+ * Read a file (with the BPMN model).
+ * @param file The file.
+ * @param callback A callback function getting the read XML code.
+ */
 function readFile(file, callback) {
     let reader = new FileReader();
     reader.onload = function (e) {
@@ -148,6 +171,11 @@ fileInput.addEventListener("change", function (e) {
     readFile(e.target.files[0], openDiagram);
 });
 
+/**
+ * Register file opening functionality if a file is dropped at the surface.
+ * @param container The container on which the file drop shall be allowed.
+ * @param callback The callback function that shall handle the dropped file (if any).
+ */
 function registerFileDrop(container, callback) {
 
     function handleFileSelect(e) {
@@ -200,6 +228,7 @@ $(function () {
     let exampleSelector = $('#examples-opener');
     let logo = $('#BPMNinvest-logo');
     let fsuLogo = $('#fsu-logo');
+    let enableAnalysis = $('.enable-analysis');
 
     $('.buttons a').click(function (e) {
         if (!$(this).is('.active')) {
@@ -242,19 +271,43 @@ $(function () {
 
     modeler.on('commandStack.changed', exportArtifacts);
 
+    // Add merch logos.
     logo.append($('<img src="' + Logo + '" alt="Logo of BPMNinvest showing a magnifier">'));
     fsuLogo.append($('<img src="' + FSULogo + '" alt="Logo of the Friedrich Schiller University Jena, Germany">'));
 
+    // Add the enable/disable analysis toggle.
+    enableAnalysis.append($('<div class="bts-toggle-mode active">Analysis <span class="bts-toggle"><span class="bts-icon ">' + ToggleOnIcon() + '</span></span></div>'));
+    enableAnalysis.on('click', function () {
+        enabledAnalysis = !enabledAnalysis;
+        if (enabledAnalysis) {
+            $('.enable-analysis > .bts-toggle-mode')
+                .addClass('active')
+                .html('Analysis <span class="bts-toggle"><span class="bts-icon ">' + ToggleOnIcon() + '</span></span>');
+            $('.analysis').show();
+            analyzeSoundness();
+        } else {
+            $('.enable-analysis > .bts-toggle-mode')
+                .removeClass('active')
+                .html('Analysis <span class="bts-toggle"><span class="bts-icon ">' + ToggleOffIcon() + '</span></span>');
+            $('.analysis').hide();
+            if (lastVisualizer !== null) lastVisualizer.destruct();
+        }
+    });
+
+    // Add functionality for the "BPMN file" button.
     openFile.on('click', function () {
         fileInput.value = "";
         fileInput.click();
     });
+
+    // Add functionality for the "new diagram" button.
     newBPMN.on('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
 
         createNewDiagram();
     });
+    // Add the examples in a drop-down.
     exampleSelector.on('change', function (e) {
         switch ($(this).val()) {
             case 'example.bpmn': {

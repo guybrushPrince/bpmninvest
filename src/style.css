@@ -250,3 +250,14 @@ select {
     box-sizing: border-box;
     font-size: 18px;
 }
+
+.enable-analysis {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.enable-analysis > .bts-toggle-mode.active {
+    background-color: var(--token-simulation-green-base-44, #10D070);
+    color: var(--token-simulation-white, #FFFFFF);
+}
