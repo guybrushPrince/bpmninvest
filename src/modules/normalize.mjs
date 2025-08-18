@@ -20,16 +20,30 @@ import {PathFinderFactory} from "./pathfinder.mjs";
  */
 const Normalizer = (function () {
 
+    /**
+     * The constructor of NormalizerFactory.
+     * @constructor
+     */
     function NormalizerFactory() {
         let elementId = 1;
 
+        /**
+         * Normalize a set of process models contained in a set of BPMN models.
+         * @param bpmn The BPMN model(s) to normalize.
+         * @param withFaults If faults shall be shown.
+         * @returns {*[]}
+         */
         this.normalize = function (bpmn, withFaults = true) {
-            if (!Array.isArray(bpmn)) bpmn = [bpmn];
+            if (!Array.isArray(bpmn)) bpmn = [ bpmn ];
             bpmn.forEach((bpmn) => {
                 if (bpmn instanceof BPMNModel) {
+                    // For all process models in the BPMN model ...
                     let all = bpmn.getProcesses.reduce((all, p) => {
+                        // ... compute sets of incoming and outgoing flows.
                         p.computeInOut();
+                        // Find the connected components within the model.
                         let connected = findConnectedComponents(p);
+                        // Normalize each of the components.
                         connected.forEach((p) => this.normalizeProcess(p, withFaults));
                         all = all.concat(connected);
                         return all;
@@ -39,6 +53,12 @@ const Normalizer = (function () {
             });
             return bpmn;
         };
+
+        /**
+         * Normalize a process model (multiple start and end events, malformed gateways, etc.).
+         * @param process The process model to normalize.
+         * @param withFaults If faults shall be shown.
+         */
         this.normalizeProcess = function (process, withFaults = true) {
             if (process instanceof Process) {
                 if (!withFaults && asList(process.getNodes).length === 0) return;
@@ -66,27 +86,42 @@ const Normalizer = (function () {
             }
         };
 
+        /**
+         * Detect connected components in the case that the process model is not connected.
+         * @param process The process model to find the connected components of.
+         * @returns {*[]}
+         */
         let findConnectedComponents = function (process) {
             let components = [];
             let nodes = union({}, process.getNodes);
             if (asList(nodes).length === 0) return [ process ];
+            // We iterate over the list of nodes and eliminate nodes that are already in an identified component.
             while (asList(nodes).length > 0) {
+                // Take the first one ...
                 let first = asList(nodes).shift();
+                // ... create a new component and ...
                 let component = {};
+                // ... and add this node to the nodes *next* to visit.
                 let next = {};
                 next[first.getId] = first;
+                // Perform a depth-first search in all directions.
                 do {
+                    // Take the first of the next ...
                     let cur = asList(next).shift();
+                    // ... and delete it from the list of next and of the list of nodes.
                     delete next[cur.getId];
                     delete nodes[cur.getId];
+                    // Add it to the current component.
                     component[cur.getId] = cur;
+                    // Add all preceding and succeeding nodes to next that are still in the *nodes* list.
                     next = union(next, intersect(union(cur.getPreset, cur.getPostset), nodes));
                 } while (asList(next).length > 0);
+                // If there is just a single component, then we have a connected model.
                 if (components.length === 0 && asList(process.getNodes).length === asList(component).length) {
                     // Everything is fine (the graph is connected).
                     return [ process ];
                 } else {
-                    // Create a new process model
+                    // Otherwise, create a new process model out of the component.
                     let p = new Process(process.getId + '_' + components.length);
                     p.setNodes(component);
                     p.setUI(process.getUI);
@@ -99,10 +134,16 @@ const Normalizer = (function () {
                     }, {}));
                     components.push(p);
                 }
+                // Perform next steps if the list of *nodes* is not empty.
             }
             return components;
         }
 
+        /**
+         * Normalize a process model just consisting of a single node. This is done by
+         * adding an explicit start or end.
+         * @param process The process model to normalize.
+         */
         let normalizeSingletonProcess = function (process) {
             // If there is a process model with just a single node ...
             if (asList(process.getNodes).length === 1) {
@@ -110,10 +151,11 @@ const Normalizer = (function () {
                 let newNode;
                 let newEdge;
                 let single = asList(process.getNodes)[0];
+                // There is an end event, so add an explicit new start.
                 if (single instanceof End) {
                     newNode = new Start('n' + elementId++, 'StartEvent');
                     newEdge = new Edge('n' + elementId++, newNode, single);
-                } else {
+                } else { // There is any kind of node, so add an explicit new end event.
                     newNode = new End('n' + elementId++, 'EndEvent');
                     newEdge = new Edge('n' + elementId++, single, newNode);
                 }
@@ -126,6 +168,11 @@ const Normalizer = (function () {
             }
         }
 
+        /**
+         * Normalize boundary events so that they are explicitly modeled through the control-flow (e.g.,
+         * an interrupting boundary event is modeled by an XOR-split).
+         * @param process The process model to normalize.
+         */
         let normalizeBoundaryEvents = function (process) {
             // Boundary events on tasks / sub-processes are handled by transforming them into an explicit gateway.
             let withBoundaryEvents = asList(process.getNodes).filter(n =>
@@ -187,17 +234,27 @@ const Normalizer = (function () {
             });
         }
 
+        /**
+         * Normalize starts, i.e., all explicit starts get a preceding XOR-split and all implicit starts get a
+         * preceding AND-split and a single start event following the BPMN spec.
+         * @param process The current process model.
+         * @param withFaults If faults shall be shown.
+         */
         let normalizeStarts = function (process, withFaults = true) {
-            // Detect implicit start nodes
+            // Detect implicit and explicit start nodes
             let starts = asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
 
+            // If there is no start, we do not know where to start.
             if (starts.length === 0 && withFaults) {
                 faultBus.addError(process, [], FaultType.NO_START);
                 return;
             }
 
+            // Separate the starts into explicit and implicit starts.
             let explicitStarts = starts.filter((n) => (n instanceof Start));
             let implicitStarts = starts.filter((n) => !(n instanceof Start));
+
+            // Send a warning if there is an implicit start.
             if (withFaults) {
                 implicitStarts.forEach((n) => faultBus.addInfo(process, {
                     implicitStart: [ n ],
@@ -211,7 +268,6 @@ const Normalizer = (function () {
             // Implicit starts, however, get always parallel to a start events a token.
             // Therefore, we combine the explicit with a single XOR.
             // Then, we combine the implicit + the XOR with a single AND.
-
             let xor = null;
             if (explicitStarts.length > 0) {
                 xor = explicitStarts[0];
@@ -255,6 +311,7 @@ const Normalizer = (function () {
                     and = implicitStarts[0];
                 }
             }
+            // If an AND-split was created, then an explicit start event is required.
             if (!(and instanceof Start) || asList(and.getOutgoing).length >= 2) {
                 let start = new Start('n' + elementId++, 'StartEvent');
                 start.setUI(and.getUI);
@@ -277,16 +334,24 @@ const Normalizer = (function () {
             });
         };
 
+        /**
+         * Normalize ends, i.e., if there are multiple ends, they are all joined with an OR-join to simplify ongoing
+         * analysis.
+         * @param process The process model to normalize.
+         * @param withFaults If faults shall be shown.
+         */
         let normalizeEnds = function (process, withFaults = true) {
-            // Detect implicit end nodes
+            // Detect implicit and explicit end nodes
             let ends =
                 asList(process.getNodes).filter((n) => asList(n.getOutgoing).length === 0);
 
+            // If there is no end node, we have a livelock and do not know where to end.
             if (ends.length === 0 && withFaults) {
                 faultBus.addError(process, [], FaultType.NO_END);
                 return;
             }
 
+            // Filter the implicit ends and give a hint that the developer used one.
             let implicitEnds = ends.filter((n) => !(n instanceof End));
             if (withFaults) {
                 implicitEnds.forEach((n) => faultBus.addInfo(process, {
@@ -303,6 +368,7 @@ const Normalizer = (function () {
 
             let or = null;
             if (ends.length >= 2) {
+                // Insert an OR/XOR-join to join all ends.
                 or = new Gateway('n' + elementId++, null, (withFaults ? GatewayType.OR : GatewayType.XOR));
                 or.setUI(ends.map((e) => e.getUI));
                 or.addElementId(flatten(ends.map((e) => e.elementIds)));
@@ -317,6 +383,7 @@ const Normalizer = (function () {
                         process.replaceNode(end, nEnd, false);
                         end = nEnd;
                     }
+                    // Add an edge between the end and the OR/XOR gateway..
                     let sf = new Edge('n' + elementId++, end, or);
                     sf.addElementId(union(end.elementIds, or.elementIds));
                     sf.setUI(end.getUI);
@@ -336,19 +403,23 @@ const Normalizer = (function () {
             }
 
             if (or !== null) {
+                // Finally insert an explicit end event succeeding the OR/XOR-join.
                 let end = new End('n' + elementId++, 'EndEvent');
                 end.setUI(or.getUI);
                 end.addElementId(or.elementIds);
                 process.addNode(end);
+                // Add an edge between the OR/XOR-join and the new explicit end.
                 let edge = new Edge('n' + elementId++, or, end);
                 edge.setUI(end.getUI);
                 edge.addElementId(end.elementIds);
                 process.addEdge(edge);
             } else if (ends.length === 1 && implicitEnds.length === 1) {
+                // If there was just a single (implicit) end, insert an explicit end event.
                 let end = new End('n' + elementId++, 'EndEvent');
                 end.setUI(ends[0].getUI);
                 end.addElementId(ends[0].elementIds);
                 process.addNode(end);
+                // Add an edge between the single implicit end and the new explicit end.
                 let edge = new Edge('n' + elementId++, ends[0], end);
                 edge.setUI(end.getUI);
                 edge.addElementId(end.elementIds);
@@ -356,14 +427,21 @@ const Normalizer = (function () {
             }
         };
 
+        /**
+         * During normalizing starts and ends, some starts and ends got preceding or succeeding nodes. They have
+         * to be replaced with tasks.
+         * @param process The process model to normalize.
+         */
         let normalizeStartAndEnds = function (process) {
             let startEnds = asList(process.getNodes).filter((n) => (n instanceof Start || n instanceof End));
             startEnds.forEach(function (s) {
                 if ((s instanceof Start && asList(s.getIncoming).length >= 1) ||
                     (s instanceof End && asList(s.getOutgoing).length >= 1)) {
+                    // Create a new task for the start ...
                     let nS = new Task(s.getId, s.className);
                     nS.setUI(s.getUI);
                     nS.addElementId(s.elementIds);
+                    // ... and replace the node.
                     process.replaceNode(s, nS, false);
                     nS.setIncoming(s.getIncoming);
                     nS.setOutgoing(s.getOutgoing);
@@ -371,23 +449,35 @@ const Normalizer = (function () {
             });
         }
 
+        /**
+         * Normalize gateways, which are malformed (e.g., multiple incoming and multiple outgoing flows at the same
+         * time). Gateways with multiple incoming and multiple outgoing flows are separated into two gateways:
+         * one converging and one diverging.
+         * @param process The process model to normalize.
+         * @param withFaults If faults shall be shown.
+         */
         let normalizeGateways = function (process, withFaults = true) {
             let gateways = asList(process.getNodes).filter((n) => (n instanceof Gateway));
             gateways.forEach(function (g) {
+                // Check if the gateway is converging and diverging at the same time.
                 if (asList(g.getOutgoing).length >= 2 && asList(g.getIncoming).length >= 2) {
                     // Split the gateway into two.
                     let n = new Gateway('n' + elementId++, null, g.getKind);
                     n.setUI(g.getUI);
                     n.addElementId(g.elementIds);
                     process.addNode(n);
+                    // Redirect the outgoing edges to start from the new diverging gateway.
                     asList(g.getOutgoing).forEach(function (e) {
                         e.setSource(n);
                     });
+                    // Add an edge between the old gateway and the new diverging gateway.
                     let edge = new Edge('n' + elementId++, g, n);
                     edge.setUI(g.getUI);
                     edge.addElementId(g.elementIds);
                     process.addEdge(edge);
-                } else if (asList(g.getOutgoing).length <= 1 && asList(g.getIncoming).length <= 1 ||
+                }
+                // Check if the gateway is malformed.
+                if (asList(g.getOutgoing).length <= 1 && asList(g.getIncoming).length <= 1 ||
                     asList(g.getOutgoing).length >= 2 && asList(g.getIncoming).length >= 2) {
                     if (withFaults) faultBus.addWarning(process, {
                         gateway: g,
@@ -398,6 +488,10 @@ const Normalizer = (function () {
             });
         };
 
+        /**
+         * Normalize tasks that have multiple incoming or multiple outgoing flows.
+         * @param process The process model to normalize.
+         */
         let normalizeTasks = function (process) {
             let tasks = asList(process.getNodes).filter((n) => (n instanceof Task));
             tasks.forEach(function (t) {
@@ -406,13 +500,16 @@ const Normalizer = (function () {
                 // are two incoming flows with a token of each of them, the activity is executed twice.
                 // We model that with an XOR gateway.
                 if (asList(t.getIncoming).length >= 2) {
+                    // Create a new XOR-join.
                     let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
                     g.setUI(t.getUI);
                     g.addElementId(t.elementIds);
                     process.addNode(g);
+                    // Redirect the flow to the new XOR-join.
                     asList(t.getIncoming).forEach(function (e) {
                         e.setTarget(g);
                     });
+                    // Add an edge between the new XOR-join and the task.
                     let edge = new Edge('n' + elementId++, g, t);
                     edge.setUI(g.getUI);
                     edge.addElementId(g.elementIds);
@@ -422,14 +519,16 @@ const Normalizer = (function () {
                 // will place a token on all its outgoing flows. We model this explicitly with an
                 // AND gateway.
                 if (asList(t.getOutgoing).length >= 2) {
-                    // Split the gateway into two.
+                    // Create a new AND-split diverging the outgoing flows in parallel.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);
                     g.setUI(t.getUI);
                     g.addElementId(t.elementIds);
                     process.addNode(g);
+                    // Redirect the outgoing flows.
                     asList(t.getOutgoing).forEach(function (e) {
                         e.setSource(g);
                     });
+                    // Add an edge between the task and the new AND-split.
                     let edge = new Edge('n' + elementId++, t, g);
                     edge.setUI(t.getUI);
                     edge.addElementId(t.elementIds);
@@ -438,18 +537,26 @@ const Normalizer = (function () {
             });
         };
 
+        /**
+         * Normalize flows if they connect two gateways directly. In such a case, a new silent (virtual) task is
+         * inserted between to simplify analysis.
+         * @param process The process model to normalize.
+         */
         let normalizeFlows = function (process) {
             let gateways = asList(process.getNodes).filter(n => n instanceof Gateway);
             gateways.forEach(function (g) {
                 asList(g.getOutgoing).forEach(e => {
                     let s = e.getTarget;
                     if (s instanceof Gateway) {
-                        // We add a task in between them to simplify analysis.
+                        // There are two gateways with a direct edge between them.
+                        // We add a silent (virtual) task in between them to simplify analysis.
                         let t = new VirtualTask('n' + elementId++);
                         t.setUI(e.getUI);
                         t.addElementId(e.elementIds);
                         process.addNode(t);
+                        // Redirect the "old" edge to the new task.
                         e.setTarget(t);
+                        // Insert a new edge between the new task and the target gateway.
                         let edge = new Edge('n' + elementId++, t, s);
                         edge.setUI(e.getUI);
                         edge.addElementId(e.elementIds);

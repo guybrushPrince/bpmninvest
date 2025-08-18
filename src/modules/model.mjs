@@ -505,16 +505,13 @@ class Loop extends UIModel {
         asList(this.#exits).forEach(function(e) {
             cut = union(cut, e.getPostset);
         });
-        let it = 0;
-        while (asList(workingList).length !== 0) {
+        while (asList(workingList).length > 0) {
             let curId = Object.keys(workingList)[0];
             let cur = workingList[curId];
             delete workingList[curId];
-            let next = intersect(diff(cur.getPostset, union(cut, doBody)), this.#nodes);
+            let next = intersect(diff(cur.getPostset, union(union(cut, doBody), workingList)), this.#nodes);
             doBody = union(doBody, next);
             workingList = union(workingList, next);
-            it++;
-            if (it > 100) break;
         }
         this.#doBody = doBody;
 
