@@ -8,6 +8,7 @@ import './style.css';
 import './css/visfault.css';
 
 import Logo from './pic/BPMNinvest.png';
+import Survey from './pic/qr-survey.png';
 import FSULogo from './pic/Wortmarke_blue_5.png';
 
 import $ from 'jquery';
@@ -227,6 +228,7 @@ $(function () {
     let newBPMN = $('#js-new-diagram');
     let exampleSelector = $('#examples-opener');
     let logo = $('#BPMNinvest-logo');
+    let survey = $('#survey-logo, #survey-logo2');
     let fsuLogo = $('#fsu-logo');
     let enableAnalysis = $('.enable-analysis');
 
@@ -274,6 +276,14 @@ $(function () {
     // Add merch logos.
     logo.append($('<img src="' + Logo + '" alt="Logo of BPMNinvest showing a magnifier">'));
     fsuLogo.append($('<img src="' + FSULogo + '" alt="Logo of the Friedrich Schiller University Jena, Germany">'));
+    survey.append($('<img src="' + Survey + '" alt="QR code to a survey about BPMNinvest">'));
+    setTimeout(function () {
+        $("#survey").addClass('highlighted');
+        $(".survey.later").addClass('highlighted');
+    }, 300000); // 5min
+    $('.survey.later > button').on('click', function () {
+        $(this).parent().remove();
+    });
 
     // Add the enable/disable analysis toggle.
     enableAnalysis.append($('<div class="bts-toggle-mode active">Analysis <span class="bts-toggle"><span class="bts-icon ">' + ToggleOnIcon() + '</span></span></div>'));

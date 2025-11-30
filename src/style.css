@@ -49,7 +49,7 @@ select {
     color: #111;
 }
 
-.content > .message .note {
+.content > .message .note, .survey > .note {
     vertical-align: middle;
     text-align: center;
     display: block;
@@ -69,7 +69,7 @@ select {
 #fsu-logo > img {
     width: 53px;
 }
-#my-name {
+#my-name, #survey {
     color: rgba(0, 47, 93, 1.0);
     position: fixed;
     bottom: 14px;
@@ -81,7 +81,7 @@ select {
     font-size: 11px;
     text-align: center;
 }
-#my-name:hover {
+#my-name:hover, #survey:hover {
     text-decoration: underline;
 }
 
@@ -137,6 +137,7 @@ select {
     margin-right: 10px;
     font-size: 14px;
 }
+.survey > button,
 .button-row > li > a,
 .button-row > li > button,
 .d-panel > button {
@@ -260,4 +261,63 @@ select {
 .enable-analysis > .bts-toggle-mode.active {
     background-color: var(--token-simulation-green-base-44, #10D070);
     color: var(--token-simulation-white, #FFFFFF);
+}
+
+/* Survey */
+.survey {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 20px;
+    background: rgba(225, 225, 225, 1.0);
+    padding: 20px;
+}
+.survey.later {
+    display: none;
+    top: calc(50% - 150px);
+    -webkit-box-shadow: 5px 5px 15px -6px #000000;
+    box-shadow: 5px 5px 15px -6px #000000;
+    z-index: 1000;
+}
+.survey.later.highlighted {
+    display: flex;
+}
+.survey > a > #survey-logo > img,
+.survey > a > #survey-logo2 > img {
+    width: 200px;
+    height: 200px;
+}
+.survey > .note {
+    width: 100% !important;
+}
+.survey > button {
+    position: absolute;
+    right: 0;
+    top: 0;
+    cursor: pointer;
+}
+.survey > a > #survey-logo,
+.survey > a > #survey-logo2 {
+    cursor: pointer;
+}
+#survey {
+    display: block;
+    right: 230px;
+    letter-spacing: 0;
+    width: 80px;
+}
+#survey.highlighted {
+    animation: glow 1s ease-in-out infinite alternate;
+}
+@keyframes glow {
+    from {
+        text-shadow: 0 0 1px #fff, 0 0 2px #fff, 0 0 3px #0073e6, 0 0 4px #0073e6, 0 0 5px #0073e6, 0 0 6px #0073e6, 0 0 7px #0073e6;
+    }
+    to {
+        text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 6px #0073e6, 0 0 8px #0073e6, 0 0 10px #0073e6, 0 0 12px #0073e6, 0 0 14px #0073e6;
+    }
 }

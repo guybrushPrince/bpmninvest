@@ -92,22 +92,28 @@ const LoopDecomposition = (function () {
 
             process.getLoops.forEach(function (loop) {
                 if (asList(loop.getExits).length === 0) {
+                    // If the loop does not have an exit (a livelock), just remove it from the process model.
                     for (let node of asList(loop.getNodes)) {
                         if (!(node.getId in loop.getEntries)) {
+                            // Delete the loop's nodes.
                             delete process.getNodes[node.getId];
                         }
                     }
                     for (let edge of asList(process.getEdges)) {
                         if (edge.getSource.getId in loop.getNodes) {
+                            // Delete the loop's edges.
                             delete process.getEdges[edge.getId];
                         }
                     }
                 } else {
+                    // Each loop is identified uniquely by (one of) its loop exits (see the above-mentioned paper).
                     let identifierExit = asList(loop.getExits)[0];
                     // Create a new process for the loop if it is not already there.
                     let loopProcess = null;
                     let newProcess = false;
                     if (!(identifierExit.getId in uniqueLoops)) {
+                        // The loop is new (was not detected in the copied do-body for example.
+                        // Create a new process model for.
                         loopProcess = new LoopProcess(identifierExit.getId);
                         loopProcess.setSuper(process);
                         processes[loopProcess.getId] = loopProcess;
@@ -124,12 +130,16 @@ const LoopDecomposition = (function () {
                         newProcess = true;
                     } else loopProcess = uniqueLoops[identifierExit.getId];
 
-                    // Determine the entries and exits
+                    // The later entries to the loop (after conversion) are those exits being
+                    // in the do-body.
                     let realEntries = {};
                     if (loop.getDoBody !== null) {
                         realEntries = intersect(loop.getExits, loop.getDoBody);
                     } else realEntries = loop.getEntries;
+                    // Since we already have replaced the nodes in the loop with copies,
+                    // we require those entries in the process model.
                     let processRealEntries = intersect(process.getNodes, realEntries);
+                    // The same holds true for loop exits.
                     let processExits = intersect(process.getNodes, loop.getExits);
 
                     // Repair all exits and entries
