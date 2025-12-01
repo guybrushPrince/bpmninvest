@@ -56,6 +56,7 @@ let SCC = function () {
          * @returns {*[]}
          */
         this.analyze = function (process) {
+            components = [];
             // Initialize
             asList(process.getNodes).forEach((n) => {
                 index[n.getId] = -1;

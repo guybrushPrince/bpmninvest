@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import { FaultType, faultBus } from "./faultbus.mjs";
-import {asList, asObject, diff, intersect, union} from "./settools.mjs";
+import {asList, asObject, diff, intersect, isObject, union} from "./settools.mjs";
 import { SCC } from "./scc.mjs";
 import {flatten} from "array-flatten";
 import {PathFinderFactory} from "./pathfinder.mjs";
@@ -168,6 +168,34 @@ class Process extends UIModel {
             if (!(e.getSource.getId in nodes)) console.log([e.getSource, 'missing', e, this, nodes]);
             if (!(e.getTarget.getId in nodes)) console.log([e.getTarget, 'missing', e, this, nodes]);
         });
+    }
+
+    copy() {
+        let copy = new Process(this.getId);
+        asList(this.#nodes).forEach((n) => copy.addNode(n.copy));
+        asList(this.#edges).forEach((e) => {
+            let src = copy.getNodes[e.getSource.getId];
+            let tgt = copy.getNodes[e.getTarget.getId];
+            let co = new Edge(e.getId, src, tgt);
+            co.addElementId(e.elementIds);
+            co.setUI(this.getUI);
+            copy.addEdge(co);
+        });
+        if (this.#starts !== null) {
+            copy.#starts = this.#starts.map((s) => {
+                return copy.getNodes[s.getId];
+            });
+        }
+        if (this.#ends !== null) {
+            copy.#ends = this.#ends.map((e) => {
+                return copy.getNodes[e.getId];
+            });
+        }
+        copy.#super = this.#super;
+        copy.addElementId(this.elementIds);
+        copy.setUI(this.getUI);
+        copy.computeInOut();
+        return copy;
     }
 }
 class LoopProcess extends Process {}
@@ -424,7 +452,7 @@ class Edge extends UIModel {
     }
 
     asDot() {
-        return 'node' + this.#source.getId.replaceAll('-', '_') + ' -> ' + 'node' + this.#target.getId.replaceAll('-', '_') + ';';
+        return 'node' + this.#source.getId.replaceAll('-', '_') + ' -> ' + 'node' + this.#target.getId.replaceAll('-', '_') + '[label="' + this.getId + '"];';
     }
 }
 

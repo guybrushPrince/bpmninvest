@@ -1,4 +1,4 @@
-import { asList, union, intersect, diff } from "./settools.mjs";
+import {asList, union, intersect, diff, asObject} from "./settools.mjs";
 import {
     BPMNModel,
     Start,
@@ -39,7 +39,7 @@ const LoopDecomposition = (function () {
         let acyclicProcesses = {};
 
         /**
-         * Decompose a BPMN model.
+         * Decompose a (set of) BPMN model(s).
          * @param bpmn
          * @returns {{}}
          */
@@ -79,7 +79,7 @@ const LoopDecomposition = (function () {
             }
 
             return allFragments;
-        }
+        };
 
         /**
          * Decompose the loops of the process model.
@@ -87,8 +87,15 @@ const LoopDecomposition = (function () {
          * @returns {{}}
          */
         let decomposeLoops = function (process) {
+            // Create a copy of the main process model.
+            let mainProcess = copyMainProcess(process);
             let processes = { };
-            processes[process.getId] = process;
+            processes[mainProcess.getId] = mainProcess;
+
+            // Create a dictionary of the original nodes.
+            let orgNodes = union(process.getNodes, {});
+            // Get the nodes of the copy.
+            let mainNodes = mainProcess.getNodes;
 
             process.getLoops.forEach(function (loop) {
                 if (asList(loop.getExits).length === 0) {
@@ -96,30 +103,31 @@ const LoopDecomposition = (function () {
                     for (let node of asList(loop.getNodes)) {
                         if (!(node.getId in loop.getEntries)) {
                             // Delete the loop's nodes.
-                            delete process.getNodes[node.getId];
+                            delete mainNodes[node.getId];
+                            delete mainProcess.getNodes[node.getId];
                         }
                     }
-                    for (let edge of asList(process.getEdges)) {
+                    for (let edge of asList(mainProcess.getEdges)) {
                         if (edge.getSource.getId in loop.getNodes) {
                             // Delete the loop's edges.
-                            delete process.getEdges[edge.getId];
+                            delete mainProcess.getEdges[edge.getId];
                         }
                     }
                 } else {
                     // Each loop is identified uniquely by (one of) its loop exits (see the above-mentioned paper).
-                    let identifierExit = asList(loop.getExits)[0];
+                    let identifierExit = asList(loop.getExits).map((e) => e.getId).join('-');
                     // Create a new process for the loop if it is not already there.
                     let loopProcess = null;
                     let newProcess = false;
-                    if (!(identifierExit.getId in uniqueLoops)) {
+                    if (!(identifierExit in uniqueLoops)) {
                         // The loop is new (was not detected in the copied do-body for example.
                         // Create a new process model for.
-                        loopProcess = new LoopProcess(identifierExit.getId);
-                        loopProcess.setSuper(process);
+                        loopProcess = new LoopProcess(identifierExit);
+                        loopProcess.setSuper(mainProcess);
                         processes[loopProcess.getId] = loopProcess;
-                        uniqueLoops[identifierExit.getId] = loopProcess;
+                        uniqueLoops[identifierExit] = loopProcess;
 
-                        // Copy all nodes of the loop
+                        // Copy all nodes of the loop to the new loop process model.
                         for (let node of asList(loop.getNodes)) {
                             let copy = node.copy;
                             loop.getNodes[node.getId] = copy;
@@ -128,7 +136,7 @@ const LoopDecomposition = (function () {
                             loopProcess.addNode(copy);
                         }
                         newProcess = true;
-                    } else loopProcess = uniqueLoops[identifierExit.getId];
+                    } else loopProcess = uniqueLoops[identifierExit];
 
                     // The later entries to the loop (after conversion) are those exits being
                     // in the do-body.
@@ -138,9 +146,9 @@ const LoopDecomposition = (function () {
                     } else realEntries = loop.getEntries;
                     // Since we already have replaced the nodes in the loop with copies,
                     // we require those entries in the process model.
-                    let processRealEntries = intersect(process.getNodes, realEntries);
+                    let processRealEntries = intersect(mainNodes, realEntries);
                     // The same holds true for loop exits.
-                    let processExits = intersect(process.getNodes, loop.getExits);
+                    let processExits = intersect(mainNodes, loop.getExits);
 
                     // Repair all exits and entries
                     asList(loop.getExits).forEach(el => {
@@ -159,98 +167,101 @@ const LoopDecomposition = (function () {
                     // Remove all nodes of the loop being not in its do-body (except the exits).
                     let nonDoBody = diff(loop.getNodes, loop.getDoBody);
                     nonDoBody = union(nonDoBody, processExits);
-                    process.setNodes(diff(process.getNodes, nonDoBody));
+                    mainNodes = diff(mainNodes, nonDoBody);
+
+                    // Get the loop incoming edges
+                    let loopIncoming = asList(mainProcess.getEdges).filter((f) => {
+                        return f.getTarget.getId in processRealEntries;
+                    });
+                    let sendToLoop = asObject(loopIncoming.map((incoming) => {
+                        let tgt = incoming.getTarget;
+                        let intermediate = new VirtualTask('ln' + elementId++ + '-' + tgt.getId);
+                        intermediate.addElementId(tgt.elementIds);
+                        intermediate.setUI(tgt.getUI);
+                        delete mainNodes[tgt.getId];
+                        incoming.setTarget(intermediate);
+                        mainNodes[intermediate.getId] = intermediate;
+                        return intermediate;
+                    }));
+                    let xorCon = asList(sendToLoop)[0];
+                    if (asList(sendToLoop).length >= 2) {
+                        xorCon = new LoopEntryGateway('ln' + elementId++, processRealEntries);
+                        xorCon.setUI(asList(processRealEntries).map(p => p.getUI));
+                        xorCon.addElementId(flatten(asList(processRealEntries).map(p => p.elementIds)));
+                        mainNodes[xorCon.getId] = xorCon;
+                        asList(sendToLoop).forEach((intermediate) => {
+                            let f = new Edge(intermediate.getId + '-' + xorCon.getId, intermediate, xorCon);
+                            f.addElementId(intermediate.elementIds);
+                            f.setUI(intermediate.getUI);
+                            mainProcess.addEdge(f);
+                        });
+                    }
+
+                    // Get the loop outgoing edges
+                    let loopOutgoing = asList(mainProcess.getEdges).filter((f) => {
+                        return !(f.getTarget.getId in loop.getNodes) && f.getSource.getId in processExits;
+                    });
+                    let catchFromLoop = asObject(loopOutgoing.map((outgoing) => {
+                        let src = outgoing.getSource;
+                        let intermediate = new VirtualTask('ln' + elementId++ + '-' + src.getId);
+                        intermediate.addElementId(src.elementIds);
+                        intermediate.setUI(src.getUI);
+                        delete mainNodes[src.getId];
+                        outgoing.setSource(intermediate);
+                        mainNodes[intermediate.getId] = intermediate;
+                        return intermediate;
+                    }));
+                    let xorDiv = asList(catchFromLoop)[0];
+                    if (asList(catchFromLoop).length >= 2) {
+                        xorDiv = new LoopExitGateway('ln' + elementId++, processExits);
+                        xorDiv.setUI(asList(processExits).map(p => p.getUI));
+                        xorDiv.addElementId(flatten(asList(processExits).map(p => p.elementIds)));
+                        mainNodes[xorDiv.getId] = xorDiv;
+                        asList(catchFromLoop).forEach((intermediate) => {
+                            let f = new Edge(xorDiv.getId + '-' + intermediate.getId, xorDiv, intermediate);
+                            f.addElementId(intermediate.elementIds);
+                            f.setUI(intermediate.getUI);
+                            mainProcess.addEdge(f);
+                        });
+                    }
 
                     // Insert a loop node for the loop
                     let loopNode = new LoopTask('ln' + elementId++, loopProcess);
                     loopNode.setUI(loop.getUI);
                     loopNode.addElementId(loop.elementIds);
-                    process.addNode(loopNode);
-                    // Insert the converging gateway
-                    let xorCon = new LoopEntryGateway('ln' + elementId++, processRealEntries);
-                    xorCon.setUI(asList(processRealEntries).map(p => p.getUI));
-                    xorCon.addElementId(flatten(asList(processRealEntries).map(p => p.elementIds)));
-                    process.addNode(xorCon);
-                    // Insert the diverging gateway
-                    let xorDiv = new LoopExitGateway('ln' + elementId++, processExits);
-                    xorDiv.setUI(asList(processExits).map(p => p.getUI));
-                    xorDiv.addElementId(flatten(asList(processExits).map(p => p.elementIds)));
-                    process.addNode(xorDiv);
+                    mainNodes[loopNode.getId] = loopNode;
                     // Add edges
                     let inL = new Edge('ln' + elementId++, xorCon, loopNode);
                     inL.setUI(loopNode.getUI);
                     inL.addElementId(loopNode.elementIds);
-                    process.addEdge(inL);
+                    mainProcess.addEdge(inL);
                     let outL = new Edge('ln' + elementId++, loopNode, xorDiv);
                     outL.setUI(loopNode.getUI);
                     outL.addElementId(loopNode.elementIds);
-                    process.addEdge(outL);
-                    xorCon.addPostset(loopNode); loopNode.addPreset(xorCon);
-                    loopNode.addPostset(xorDiv); xorDiv.addPreset(loopNode);
+                    mainProcess.addEdge(outL);
 
-                    // Insert edges from the entries (exits being in the do-body) to the converging XOR.
-                    asList(processRealEntries).forEach(entry => {
-                        xorCon.setPreset(union(xorCon.getPreset, intersect(entry.getPreset, loop.getDoBody)));
-                    })
-                    // Insert edges from the diverging XOR to all nodes outside the loop and in the postset of exits.
-                    asList(processExits).forEach(exit => {
-                        xorDiv.setPostset(union(xorDiv.getPostset, diff(exit.getPostset, loop.getNodes)));
-                    });
-                    // We have to update the predecessors and successors, respectively, of the loop entries and exits.
-                    asList(xorCon.getPreset).forEach(pred => {
-                        pred.setPostset(diff(pred.getPostset, realEntries));
-                        pred.addPostset(xorCon);
-                        let edge = new Edge('ln' + elementId++, pred, xorCon);
-                        process.addEdge(edge);
-                        asList(pred.getOutgoing).forEach(o => {
-                            if (o.getTarget.getId in realEntries) {
-                                edge.setUI(o.getUI);
-                                edge.addElementId(o.elementIds);
-                            }
-                        });
-                    });
-
-                    asList(xorDiv.getPostset).forEach(succ => {
-                        succ.setPreset(diff(succ.getPreset, loop.getExits));
-                        succ.addPreset(xorDiv);
-                        let edge = new Edge('ln' + elementId++, xorDiv, succ);
-                        process.addEdge(edge);
-                        asList(succ.getIncoming).forEach(i => {
-                            if (i.getSource.getId in loop.getExits) {
-                                edge.setUI(i.getUI);
-                                edge.addElementId(i.elementIds);
-                            }
-                        });
-                    });
-                    if (asList(xorCon.getPreset).length === 1) {
-                        let xorConT = new VirtualTask(xorCon.getId);
-                        xorConT.setUI(xorCon.getUI);
-                        xorConT.addElementId(xorCon.elementIds);
-                        process.replaceNode(xorCon, xorConT);
-                        xorCon = xorConT;
-                    }
-                    if (asList(xorDiv.getPostset).length === 1) {
-                        let xorDivT = new VirtualTask(xorDiv.getId);
-                        xorDivT.setUI(xorDiv.getUI);
-                        xorDivT.addElementId(xorDiv.elementIds);
-                        process.replaceNode(xorDiv, xorDivT);
-                        xorDiv = xorDivT;
-                    }
+                    mainProcess.setNodes(mainNodes);
 
                     // There are too much flows in the process and not enough in the loop process
-                    asList(process.getEdges).forEach((flow) => {
+                    let processFlows = union(process.getEdges, {});
+                    let mainProcessFlows = union(mainProcess.getEdges, {});
+
+                    // Eliminate the flows in the non-do-body
+                    asList(mainProcessFlows).forEach((flow) => {
+                        if (flow.getSource.getId in nonDoBody || flow.getTarget.getId in nonDoBody) {
+                            delete mainProcessFlows[flow.getId];
+                        }
+                    });
+
+                    asList(processFlows).forEach((flow) => {
                         let source = flow.getSource, target = flow.getTarget;
 
                         // There are variants:
                         // 1. Parts of the edges are not in the process anymore: Remove them from the process.
-                        let srcExists = (source.getId in process.getNodes);
-                        let tgtExists = (target.getId in process.getNodes);
+                        let srcExists = (source.getId in orgNodes);
+                        let tgtExists = (target.getId in orgNodes);
                         if (!srcExists || !tgtExists) {
-                            if (srcExists || tgtExists) {
-                                if (tgtExists) delete target.getPreset[source.getId];
-                                else delete source.getPostset[target.getId];
-                            }
-                            delete process.getEdges[flow.getId];
+                            delete mainProcessFlows[flow.getId];
                         }
                         // 2. The edge is connected to the loop
                         if (newProcess && ((source.getId in loop.getNodes) || (target.getId in loop.getNodes))) {
@@ -262,6 +273,7 @@ const LoopDecomposition = (function () {
                                 start.setUI(source.getUI);
                                 start.addElementId(source.elementIds);
                                 loopProcess.addNode(start);
+
                                 let startEdge = new Edge('ln' + elementId++, start, lTarget);
                                 startEdge.setUI(start.getUI);
                                 startEdge.addElementId(start.elementIds);
@@ -269,47 +281,16 @@ const LoopDecomposition = (function () {
 
                                 // Insert a new end (the source must be in the loop)
                                 let lSource = loop.getNodes[source.getId];
-                                if (target.getId in realEntries) {
-                                    // Insert a new gateway, which represents the old exit
-                                    let g = new Gateway('ln' + elementId++, null, GatewayType.XOR);
-                                    g.setUI(target.getUI);
-                                    g.addElementId(target.elementIds);
-                                    loopProcess.addNode(g);
-                                    let gEdge = new Edge('ln' + elementId++, lSource, g);
-                                    gEdge.setUI(g.getUI);
-                                    gEdge.addElementId(g.elementIds);
-                                    loopProcess.addEdge(gEdge);
-                                    // Insert a start node coming from outside the loop
-                                    let start2 = new Start('ln' + elementId++, 'Start');
-                                    start2.setUI(target.getUI);
-                                    start2.addElementId(target.elementIds);
-                                    loopProcess.addNode(start2);
-                                    let start2Edge = new Edge('ln' + elementId++, start2, g);
-                                    start2Edge.setUI(start2.getUI);
-                                    start2Edge.addElementId(start2.elementIds);
-                                    loopProcess.addEdge(start2Edge);
 
-                                    let end = new End('ln' + elementId++, 'End');
-                                    end.setUI(target.getUI);
-                                    end.addElementId(target.elementIds);
-                                    loopProcess.addNode(end);
-                                    let endEdge = new Edge('ln' + elementId++, g, end);
-                                    endEdge.setUI(end.getUI);
-                                    endEdge.addElementId(end.elementIds);
-                                    loopProcess.addEdge(endEdge);
-                                } else {
-                                    let end = new End('ln' + elementId++, 'End');
-                                    end.setUI(target.getUI);
-                                    end.addElementId(target.elementIds);
-                                    loopProcess.addNode(end);
-                                    let endEdge = new Edge('ln' + elementId++, lSource, end);
-                                    endEdge.setUI(end.getUI);
-                                    endEdge.addElementId(end.elementIds);
-                                    loopProcess.addEdge(endEdge);
-                                }
+                                let end = new End('ln' + elementId++, 'End');
+                                end.setUI(target.getUI);
+                                end.addElementId(target.elementIds);
+                                loopProcess.addNode(end);
 
-                                delete lTarget.getPreset[source.getId];
-                                delete lSource.getPostset[target.getId];
+                                let endEdge = new Edge('ln' + elementId++, lSource, end);
+                                endEdge.setUI(end.getUI);
+                                endEdge.addElementId(end.elementIds);
+                                loopProcess.addEdge(endEdge);
 
                             } else if (source.getId in loop.getExits && !(target.getId in loop.getNodes)) {
                                 // Insert a new end
@@ -335,6 +316,7 @@ const LoopDecomposition = (function () {
                             }
                         }
                     });
+                    mainProcess.setEdges(mainProcessFlows);
 
                     // If a new process was created, normalize it.
                     if (newProcess) {
@@ -343,13 +325,11 @@ const LoopDecomposition = (function () {
                 }
 
             });
-            // The process model does not contain these loops now. However, there could be still nested loops.
-            process.setLoops(null);
             // Normalize the process model for the next round.
-            Normalizer.normalizeProcess(process, false);
+            Normalizer.normalizeProcess(mainProcess, false);
 
             return processes;
-        }
+        };
 
         let removeDeadLoops = function (process) {
             let dead = {};
@@ -388,7 +368,11 @@ const LoopDecomposition = (function () {
                 }
             } while (asList(dead).length > 0);
             process.computeInOut();
-        }
+        };
+
+        let copyMainProcess = function (process) {
+            return process.copy();
+        };
     }
 
     return function() {
