@@ -79,6 +79,7 @@
     font-size: 12px;
     padding: 20px;
     overflow-y: auto;
+    z-index: 99;
 }
 .d-panel h1 {
     margin: 0;
@@ -127,6 +128,31 @@
     background: var(--info-color);
 }
 
+.error-list {
+    display: none;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    position: fixed;
+    right: 10px;
+    bottom: 100px;
+    max-height: 80%;
+    overflow-y: auto;
+    height: auto;
+    z-index: 98;
+}
+.error-list.selected {
+    display: flex;
+}
+.error-list > .list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.error-list > .title {
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
 .highlight {
     --shadow: 0 0 12px var(--info-color);
     filter: drop-shadow(var(--shadow));
@@ -170,6 +196,9 @@
 }
 .vis-line .djs-visual marker * {
     fill: var(--stroke-color) !important;
+}
+.note.el {
+    display: flex;
 }
 .note.info {
     --note-background: var(--info-color);

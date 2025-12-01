@@ -34,7 +34,12 @@ const VisClasses = {
     HINT_FADE: 'hint-fade',
     NON_FADE: 'non-fade',
 
-    HIGHLIGHT: 'highlight'
+    HIGHLIGHT: 'highlight',
+    SELECTED: 'selected',
+
+    ERROR_LIST: 'error-list',
+    ERROR_LIST_TITLE: 'title',
+    ERROR_LIST_LIST: 'list'
 };
 
 // Texts being displayed in the editor.
@@ -51,7 +56,9 @@ const Texts = {
     POTENTIAL_LACK_OF_SYNCHRONIZATION: 'Possible missing synchronization',
     POTENTIAL_ENDLESS_LOOP: 'Possible endless loop',
     LIVE_LOCK: 'Endless loop',
-    DEAD_LOOP: 'Dead loop'
+    DEAD_LOOP: 'Dead loop',
+
+    QUESTION_MARK_HINT: 'Click to get detailed information.'
 };
 
 const Visualizer = (function () {
@@ -63,6 +70,9 @@ const Visualizer = (function () {
         let modelerInstance;
 
         let errorNodeMap = {};
+
+        let errorList;
+        let overallErrorList;
 
         this.initialize = function (modeler, faultBus) {
             modelerInstance = modeler;
@@ -76,6 +86,13 @@ const Visualizer = (function () {
                 'noDeadActivities',
                 'bestPractices'
             ]);
+
+            let b = $('body');
+            overallErrorList = $('<div class="' + VisClasses.ERROR_LIST + '"></div>');
+            overallErrorList.append($('<div class="' + VisClasses.ERROR_LIST_TITLE + '">Flaws</div>'));
+            errorList = $('<div class="' + VisClasses.ERROR_LIST_LIST + '"></div>');
+            overallErrorList.append(errorList);
+            b.append(overallErrorList);
         }
         this.destruct = function () {
             faultBus.unsubscribe(this);
@@ -83,6 +100,8 @@ const Visualizer = (function () {
                 $('[data-element-id="' + el.id + '"').removeClass(asList(VisClasses).join(' '));
             });
             overlays.clear();
+            errorList.empty();
+            overallErrorList.removeClass(VisClasses.SELECTED);
         }
 
         this.notify = function (type, process, elements, fault) {
@@ -354,20 +373,38 @@ const Visualizer = (function () {
                     let infoDiv = errorNodeMap[id];
                     let cl = show ? VisClasses.ANALYSIS_HINT_VISIBLE : VisClasses.ANALYSIS_HINT;
                     let noteDiv = $('<div class="' + cl + ' ' + type + '"><div>' + text + '</div></div>');
+                    let noteDivList = noteDiv.clone();
+                    noteDivList.addClass('el');
+
+                    let openerDiv = $('<div class="' + VisClasses.DETAIL_OPENER + ' ' + type + '" title="' + Texts.QUESTION_MARK_HINT + '">?</div>');
+                    let listOpenerDiv = openerDiv.clone();
+                    noteDiv.append(openerDiv);
+                    noteDivList.append(listOpenerDiv);
+
+
+                    $(openerDiv).add(listOpenerDiv).on('click', (ev) => {
+                        openDetailPanel(detailAction, detailClose);
+                    });
+                    $(noteDiv).add(noteDivList).on('mouseenter', (ev) => {
+                        $('[data-element-id="' + id + '"').addClass(VisClasses.SELECTED);
+                        $('.djs-overlays[data-container-id="' + id + '"').addClass(VisClasses.SELECTED);
+                    });
+                    $(noteDiv).add(noteDivList).on('mouseleave', (ev) => {
+                        $('[data-element-id="' + id + '"').removeClass(VisClasses.SELECTED);
+                        $('.djs-overlays[data-container-id="' + id + '"').removeClass(VisClasses.SELECTED);
+                    });
+
                     infoDiv.append(noteDiv);
                     overlays.add(id, 'note', {
                         position: {
-                            bottom: 5,
-                            right: 5
+                            bottom: 10,
+                            right: 10
                         },
                         html: infoDiv
                     });
 
-                    let openerDiv = $('<div class="' + VisClasses.DETAIL_OPENER + ' ' + type + '">?</div>');
-                    openerDiv.on('click', (ev) => {
-                        openDetailPanel(detailAction, detailClose);
-                    });
-                    noteDiv.append(openerDiv);
+                    overallErrorList.addClass(VisClasses.SELECTED);
+                    errorList.append(noteDivList);
                 }
             });
         };
