@@ -63,9 +63,11 @@ let PathFinderFactory = function(modeler = null) {
                 );
 
                 let superPath = this.findPathFromStartToTarget(targetNodes.shift(), supProcess);
-                superPath.pop(); // Remove the loop node
-                path.forEach(p => superPath.push(p));
-                path = superPath;
+                if (superPath !== null) {
+                    superPath.pop(); // Remove the loop node
+                    path.forEach(p => superPath.push(p));
+                    path = superPath;
+                }
             }
 
             return path;

@@ -36,18 +36,19 @@ const ModelExtractor = (function () {
         };
 
         let findProcessLike = function (elements) {
-            return elements.filter(el => isOfType(el, 'Process') ||
-                isOfType(el, 'Participant') || isOfType(el, 'SubProcess'));
+            return elements.filter(el => (isOfType(el, 'Process') && !el.collapsed) ||
+                isOfType(el, 'Participant') || (isOfType(el, 'SubProcess') && !el.collapsed));
         };
         let findSubProcesses = function (elements) {
-            return elements.filter(el => isOfType(el, 'SubProcess'));
+            return elements.filter(el => (isOfType(el, 'SubProcess') && !el.collapsed));
         };
 
         let identifyProcesses = function (collaborations) {
             return flatten(collaborations.map(col => {
                 if (isOfType(col,'Collaboration')) {
                     return col.children.filter(el => isOfType(el, 'Process') ||
-                        isOfType(el, 'Participant') || isOfType(el, 'SubProcess'));
+                        isOfType(el, 'Participant') ||
+                        (isOfType(el, 'SubProcess') && !el.collapsed));
                 } else {
                     return col;
                 }
@@ -96,16 +97,16 @@ const ModelExtractor = (function () {
                 if (isOfType(node, 'Task') || isOfType(node, 'Intermediate') ||
                     isOfType(node, 'SubProcess')) {
                     nodes[id] = new Task(id, type);
-                    if (isOfType(node, 'SubProcess')) {
-                         nodes[id].setSubProcess(function (processes) {
-                             for (let p of processes) {
-                                 if (p.getId === id) {
-                                     nodes[id].setSubProcess(p);
-                                     p.setSuper(process);
-                                     return;
-                                 }
-                             }
-                         });
+                    if (isOfType(node, 'SubProcess') && !node.collapsed) {
+                        nodes[id].setSubProcess(function (processes) {
+                            for (let p of processes) {
+                                if (p.getId === id) {
+                                    nodes[id].setSubProcess(p);
+                                    p.setSuper(process);
+                                    return;
+                                }
+                            }
+                        });
                     }
                 } else if (isOfType(node, 'Start')) nodes[id] = new Start(id, type);
                 else if (isOfType(node, 'End')) nodes[id] = new End(id, type);

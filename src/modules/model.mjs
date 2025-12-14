@@ -162,11 +162,21 @@ class Process extends UIModel {
         return c;
     }
 
-    isValid() {
+    isValid(withPrePostset = false) {
         let nodes = this.getNodes;
         asList(this.getEdges).forEach(e => {
             if (!(e.getSource.getId in nodes)) console.log([e.getSource, 'missing', e, this, nodes]);
             if (!(e.getTarget.getId in nodes)) console.log([e.getTarget, 'missing', e, this, nodes]);
+            if (withPrePostset) {
+                let source = e.getSource;
+                let target = e.getTarget;
+                if (!(target.getId in source.getPostset)) {
+                    console.log(['Improper postset', source, 'missing', target.getId, this]);
+                }
+                if (!(source.getId in target.getPreset)) {
+                    console.log(['Improper preset', target, 'missing', source.getId, this]);
+                }
+            }
         });
     }
 
