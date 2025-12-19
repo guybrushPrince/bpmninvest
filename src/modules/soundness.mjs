@@ -298,7 +298,7 @@ const SoundnessVerifier = (function () {
                     let nonTriggering = diff(p.getPreset, path);
                     asList(nonTriggering).forEach(nT => {
                         // Add the flows between the non-trigger nodes as well the nodes themselves.
-                        let flows = asList(nT.getOutgoing).filter(o => o.getTarget.getId in path);
+                        let flows = asList(nT.getOutgoing).filter(o => !(o.getTarget.getId in path));
                         flaws = union(flaws, asObject(flows));
                         flaws[nT.getId] = nT;
                         paths[i.getId][nT.getId] = nT;
