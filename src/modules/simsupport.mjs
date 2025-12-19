@@ -150,7 +150,7 @@ let TokenSimulationHandling = function (modeler) {
                     let prom = simulationSupport.elementExit(id);
                     prom.then(() => {
                         if (pause) pauseSimulation.pause();
-                        action(node);
+                        action(n);
                     });
                 }
             });
@@ -166,7 +166,7 @@ let TokenSimulationHandling = function (modeler) {
                     let prom = simulationSupport.elementEnter(id);
                     prom.then(() => {
                         if (pause) pauseSimulation.pause();
-                        action(node);
+                        action(n);
                     });
                 }
             });
