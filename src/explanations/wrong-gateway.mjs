@@ -16,8 +16,9 @@ let explanation = function (panel, information, modeler) {
         'control flows, either to perform decisions or describe concurrent workflows (or a mix of both). ' +
         'As a best practice, a gateway shall either have exactly one single incoming flow and at least two outgoing ' +
         'sequence flows (in case of a diverging gateway) or at least two incoming flows and exactly one single ' +
-        'outgoing sequence flow. Gateways without an incoming or outgoing flow as well as gateways with a single ' +
-        'incoming and a single outgoing flow are arbitrary and increases the difficulty to understand the process ' +
+        'outgoing sequence flow (in case of a converging gateway). Gateways without an incoming or outgoing flow as ' +
+        'well as gateways with a single ' +
+        'incoming and a single outgoing flow are arbitrary and increase the difficulty to understand the process ' +
         'model.</p>');
 
     let type = gatewayElement.type.substring(5);
