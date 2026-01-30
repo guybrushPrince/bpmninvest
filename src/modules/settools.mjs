@@ -52,6 +52,7 @@ let asList = function (s) {
  * @returns {*}
  */
 let asObject = function (l) {
+    if (l.length === 0) return {};
     return l.reduce((o,i) => { o[i.getId] = i; return o; }, {});
 };
 

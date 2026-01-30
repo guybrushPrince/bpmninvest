@@ -20,6 +20,9 @@
     --dark-font: rgba(5, 5, 5, 1.0);
     --note-width: 150px;
     --note-opener-width: 30px;
+
+    --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+    --button-shadow: inset 0 0 1px 1px rgba(0,0,0,0.1);
 }
 .note {
     background-color: var(--note-background);
@@ -69,17 +72,25 @@
 }
 
 .d-panel {
-    height: 100%;
+    height: calc(100% - 100px);
     position: fixed;
-    top: 0; right: 0;
+    top: calc(100px / 2);
+    right: 10px;
     width: 30%;
     background: var(--hint-color);
     color: var(--dark-font);
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 12px;
-    padding: 20px;
-    overflow-y: auto;
+    padding: 40px 10px 20px 20px;
+    overflow-y: hidden;
     z-index: 99;
+    -webkit-box-shadow: var(--shadow);
+    box-shadow: var(--shadow);
+    border-radius: 20px;
+}
+.d-panel > div {
+    height: 100%;
+    overflow-y: auto;
 }
 .d-panel h1 {
     margin: 0;
@@ -110,13 +121,17 @@
     font-weight: bolder;
 }
 .d-panel #close-panel {
-    position: fixed;
-    right: 20px;
+    position: absolute;
+    right: 5px;
     top: 5px;
     width: 25px;
     height: 25px;
     cursor: pointer;
     padding: 0;
+}
+.d-panel #close-panel:hover {
+    -webkit-box-shadow: var(--button-shadow);
+    box-shadow: var(--button-shadow);
 }
 .d-panel .simulation-hint:empty {
     display: none;

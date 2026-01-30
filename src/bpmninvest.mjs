@@ -25,6 +25,24 @@ import { SCC } from "./modules/scc.mjs";
 import { Normalizer } from "./modules/normalize.mjs";
 import { Visualizer } from "./modules/visualizer.mjs";
 
+// Load flaw/fault/error modules.
+import { visualizerModule as noStartModule } from './explanations/no-start.mjs';
+import { visualizerModule as noEndModule } from './explanations/no-end.mjs';
+import { visualizerModule as implicitStartModule } from './explanations/implicit-start.mjs';
+import { visualizerModule as implicitEndModule } from './explanations/implicit-end.mjs';
+import { visualizerModule as wrongGatewayModule } from './explanations/wrong-gateway.mjs';
+import { visualizerModule as multipleIncomingModule } from './explanations/non-gateway-multiple-in.mjs';
+import { visualizerModule as multipleOutgoingModule } from './explanations/non-gateway-multiple-out.mjs';
+import { visualizerModule as nonInterruptingBackModule } from './explanations/non-interrupting-back.mjs';
+import { visualizerModule as loopEntryIsANDModule } from './explanations/loop-entry-is-and.mjs';
+import { visualizerModule as loopExitNotXORModule } from './explanations/loop-exit-not-xor.mjs';
+import { visualizerModule as liveLockModule } from './explanations/live-lock.mjs';
+import { visualizerModule as deadLoopModule } from './explanations/dead-loop.mjs';
+import { visualizerModule as backJoinModule } from './explanations/back-join-is-and.mjs';
+import { visualizerModule as lackOfSynchronizationModule } from './explanations/lack-of-synchronization.mjs';
+import { visualizerModule as deadlockModule } from './explanations/deadlocks.mjs';
+import { visualizerModule as endlessLoopModule } from './explanations/endless-loop.mjs';
+
 import emptyDiagramXML from './example/empty.bpmn';
 import exampleDiagramXML from './example/example.bpmn';
 import faultMasking from './example/fault-masking.bpmn';
@@ -53,8 +71,27 @@ import deadTasksConnected from './example/bpmnanalyzer/dead_tasks_connected.bpmn
 import orderHandling from './example/bpmnanalyzer/order_handling.bpmn';
 
 import { faultBus } from "./modules/faultbus.mjs";
-import {ToggleOffIcon, ToggleOnIcon} from "bpmn-js-token-simulation/lib/icons/index.js";
+import { ToggleOffIcon, ToggleOnIcon } from "bpmn-js-token-simulation/lib/icons/index.js";
 
+// Register different fault/flaw/error modules.
+Visualizer().register([
+    noStartModule,
+    noEndModule,
+    implicitStartModule,
+    implicitEndModule,
+    wrongGatewayModule,
+    multipleIncomingModule,
+    multipleOutgoingModule,
+    nonInterruptingBackModule,
+    liveLockModule, // 7SV: VL1
+    deadLoopModule, // 7SV: VL2
+    loopEntryIsANDModule, // 7SV: VL3
+    loopExitNotXORModule, // 7SV: VL4
+    backJoinModule, // 7SV: VL5
+    lackOfSynchronizationModule, // 7SV: VA1
+    deadlockModule, // 7SV: VA2
+    endlessLoopModule // 7SV: VA1 (extended)
+]);
 
 // Create a container where files can be dropped on to be opened.
 let container = $('#js-drop-zone');

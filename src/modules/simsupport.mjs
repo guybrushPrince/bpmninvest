@@ -131,10 +131,18 @@ let TokenSimulationHandling = function (modeler) {
                     (n instanceof Task) || (n instanceof ProcessEvent) || (n instanceof Start) || (n instanceof End)) {
                     if (!isEmpty(n.elementIds)) {
                         let id = asList(n.elementIds)[0];
-                        simulationSupport.triggerElement(id);
+                        try {
+                            simulationSupport.triggerElement(id);
+                        } catch (exception) {
+                            console.log(exception);
+                        }
                     }
                 } else if (typeof n === 'string') {
-                    simulationSupport.triggerElement(n);
+                    try {
+                        simulationSupport.triggerElement(n);
+                    } catch (exception) {
+                        console.log(exception);
+                    }
                 }
             });
         };

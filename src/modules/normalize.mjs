@@ -10,7 +10,7 @@
  */
 import { FaultType, faultBus  } from "./faultbus.mjs";
 import {BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask, LoopProcess} from "./model.mjs";
-import {asList, diff, intersect, union} from "./settools.mjs";
+import {asList, asObject, diff, intersect, isEmpty, union} from "./settools.mjs";
 import {flatten} from "array-flatten";
 import {PathFinderFactory} from "./pathfinder.mjs";
 
@@ -186,6 +186,12 @@ const Normalizer = (function () {
                 if (nonInterrupting.length >= 1) {
                     // We require an inclusive gateway.
                     gatewayKind = GatewayType.OR;
+                    // Add a warning to the non-interrupting boundary events.
+                    /*faultBus.addInfo(process, {
+                        task: n,
+                        boundaries: nonInterrupting
+                    }, FaultType.NON_INTERRUPTING);*/
+                    isOnPathFromStartToEnd(process, boundaryEvents, n);
                 }
                 let gateway = new Gateway('n' + elementId++, null, gatewayKind);
                 gateway.setUI(asList(boundaryEvents).map(b => b.getUI));
@@ -233,6 +239,81 @@ const Normalizer = (function () {
                 });
             });
         }
+
+        /**
+         * Checks if a set of non-interrupting boundary events is merged back into the main
+         * control-flow.
+         * @param process The process containing the boundary events.
+         * @param boundaries The non-interrupting boundary events.
+         * @param task The task having those event.
+         */
+        let isOnPathFromStartToEnd = function (process, boundaries, task) {
+            // Determine all nodes between start and ends without passing the current boundary event.
+            let shallNotReach = {};
+            let next = asObject(process.getStarts);
+            do {
+                next = asList(next);
+                let cur =  next.shift();
+                shallNotReach[cur.getId] = cur;
+                next = union(asObject(next), diff(cur.getPostset, shallNotReach));
+                if (cur instanceof Task && asList(cur.getBoundaries).length >= 1) {
+                    let boundaryEvents = cur.getBoundaries;
+                    next = union(next, asObject(asList(boundaryEvents).filter(b => !(b.getId in boundaries))));
+                }
+            } while (!isEmpty(next));
+
+            // Now, starting from the non-interrupting event, is there any path to a node, which shall not be reached?
+            let parents = {};
+            next = asList(boundaries).reduce((n,b) => {
+                n = union(n, b.getPostset);
+                return n;
+            }, {});
+            let reaches = {};
+            do {
+                next = asList(next);
+                let cur =  next.shift();
+                reaches[cur.getId] = cur;
+                if (!(cur.getId in shallNotReach)) {
+                    next = union(asObject(next), diff(cur.getPostset, reaches));
+                    if (cur instanceof Task && asList(cur.getBoundaries).length >= 1) {
+                        next = union(next, cur.getBoundaries);
+                        asList(cur.getBoundaries).forEach((b) => {
+                            parents[b.getId] = cur.getId;
+                        });
+                    }
+                }
+            } while (!isEmpty(next));
+
+            // If the non-interrupting is merged back to the main flow, we have a problem.
+            let bad = intersect(reaches, shallNotReach);
+            if (!isEmpty(bad)) {
+                // We go back from those nodes to the boundary event for diagnostics.
+                let paths = {};
+                let badBoundary = {};
+                next = union({}, bad);
+                do {
+                    next = asList(next);
+                    let cur =  next.shift();
+                    if (cur.getId in reaches) {
+                        paths[cur.getId] = cur;
+                        next = union(asObject(next), diff(cur.getPreset, paths));
+                        if (cur.getId in parents) {
+                            next = union(next, diff(asObject([ parent[cur.getId ]]), paths));
+                        }
+                    } else if (cur.getId in boundaries) {
+                        paths[cur.getId] = cur;
+                        badBoundary[cur.getId] = cur;
+                    }
+                } while (!isEmpty(next));
+
+                // Inform about the error.
+                faultBus.addWarning(process, {
+                    task: task,
+                    boundaries: badBoundary,
+                    paths: paths
+                }, FaultType.NON_INTERRUPTING_BACK);
+            }
+        };
 
         /**
          * Normalize starts, i.e., all explicit starts get a preceding XOR-split and all implicit starts get a
@@ -500,6 +581,9 @@ const Normalizer = (function () {
                 // are two incoming flows with a token of each of them, the activity is executed twice.
                 // We model that with an XOR gateway.
                 if (asList(t.getIncoming).length >= 2) {
+                    // Inform about the error.
+                    faultBus.addInfo(process, t, FaultType.TASK_MULTIPLE_IN);
+
                     // Create a new XOR-join.
                     let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
                     g.setUI(t.getUI);
@@ -519,6 +603,8 @@ const Normalizer = (function () {
                 // will place a token on all its outgoing flows. We model this explicitly with an
                 // AND gateway.
                 if (asList(t.getOutgoing).length >= 2) {
+                    faultBus.addInfo(process, t, FaultType.TASK_MULTIPLE_OUT);
+
                     // Create a new AND-split diverging the outgoing flows in parallel.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);
                     g.setUI(t.getUI);

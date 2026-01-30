@@ -140,7 +140,7 @@ select {
 .survey > button,
 .button-row > li > a,
 .button-row > li > button,
-.d-panel > button {
+.d-panel button {
     color: black;
     background-color: #f8f8f8;
     border-radius: 3px;
@@ -150,6 +150,7 @@ select {
     font-weight: bold;
     text-align: center;
     border: solid 1px #cdcdcd;
+    transition: 0.25s;
 }
 
 .button-row a,
@@ -165,6 +166,11 @@ select {
     opacity: 1;
     box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
     cursor: pointer;
+}
+.button-row a.active:hover,
+.button-row button.active:hover,
+.d-panel button:hover {
+    box-shadow: inset 0 0 1px 1px rgba(0,0,0,0.1);
 }
 
 .examples {

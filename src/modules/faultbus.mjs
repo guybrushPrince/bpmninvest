@@ -6,6 +6,9 @@ const FaultType = {
     NO_END: 'NO_END',
     IMPLICIT_START: 'IMPLICIT_START',
     IMPLICIT_END: 'IMPLICIT_END',
+    NON_GATEWAY_MULTIPLE_IN: 'NON_GATEWAY_MULTIPLE_IN',
+    NON_GATEWAY_MULTIPLE_OUT: 'NON_GATEWAY_MULTIPLE_OUT',
+    NON_INTERRUPTING_BACK: 'NON_INTERRUPTING_BACK',
     GATEWAY_WITHOUT_MULTIPLE_FLOWS: 'GATEWAY_WITHOUT_MULTIPLE_FLOWS',
     LOOP_EXIT_NOT_XOR: 'LOOP_EXIT_NOT_XOR',
     LOOP_ENTRY_IS_AND: 'LOOP_ENTRY_IS_AND',
@@ -17,7 +20,7 @@ const FaultType = {
     DEAD_LOOP: 'DEAD_LOOP'
 };
 
-const FAULT_LEVEL = {
+const FaultLevel = {
     INFO: 'info',
     WARNING: 'warning',
     ERROR: 'error'
@@ -33,18 +36,18 @@ const faultBus = (function () {
 
         // Notify observers about fault
         this.addInfo = function (process, elements, fault) {
-            console.log(FAULT_LEVEL.INFO, [process, elements, fault]);
-            this.notify(FAULT_LEVEL.INFO, process, elements, fault);
+            console.log(FaultLevel.INFO, [process, elements, fault]);
+            this.notify(FaultLevel.INFO, process, elements, fault);
         };
 
         this.addWarning = function (process, elements, fault) {
-            console.log(FAULT_LEVEL.WARNING, [process, elements, fault]);
-            this.notify(FAULT_LEVEL.WARNING, process, elements, fault);
+            console.log(FaultLevel.WARNING, [process, elements, fault]);
+            this.notify(FaultLevel.WARNING, process, elements, fault);
         };
 
         this.addError = function (process, elements, fault) {
-            console.log(FAULT_LEVEL.ERROR, [process, elements, fault]);
-            this.notify(FAULT_LEVEL.ERROR, process, elements, fault);
+            console.log(FaultLevel.ERROR, [process, elements, fault]);
+            this.notify(FaultLevel.ERROR, process, elements, fault);
         };
 
         // Add an observer
@@ -70,4 +73,4 @@ const faultBus = (function () {
     return new FaultBus();
 })();
 
-export { FaultType, faultBus };
+export { FaultType, FaultLevel, faultBus };
