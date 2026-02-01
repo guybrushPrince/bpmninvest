@@ -3,7 +3,7 @@
         --stroke-color: var(--dark-trans);
     }
     50% {
-        --stroke-color: var(--error-color);
+        --stroke-color: var(--pulse-color);
     }
 }
 
@@ -11,6 +11,7 @@
     --info-color: rgba(50, 100, 200, 0.7);
     --warning-color: rgb(241, 227, 93, 0.7);
     --error-color: rgba(205, 50, 50, 0.7);
+    --pulse-color: var(--error-color);
     --hint-color: rgb(255, 244, 158, 1.0);
     --dark-trans: rgb(0, 0, 0, 0.3);
 
@@ -128,6 +129,7 @@
     height: 25px;
     cursor: pointer;
     padding: 0;
+    border-radius: 3px 20px 3px 3px;
 }
 .d-panel #close-panel:hover {
     -webkit-box-shadow: var(--button-shadow);
@@ -188,6 +190,15 @@
 .error-pulse {
     animation: pulse 2s infinite;
     --stroke-color: var(--error-color);
+    --pulse-color: var(--error-color);
+}
+.error-pulse.warning-line {
+    --stroke-color: var(--warning-color);
+    --pulse-color: var(--warning-color);
+}
+.error-pulse.info-line {
+    --stroke-color: var(--info-color);
+    --pulse-color: var(--info-color);
 }
 .vis-line:not(.djs-connection) .djs-visual path {
     stroke: var(--stroke-color) !important;

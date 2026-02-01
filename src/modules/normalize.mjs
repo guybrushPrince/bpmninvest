@@ -408,6 +408,7 @@ const Normalizer = (function () {
             explicitStarts.forEach(function (start) {
                 if (asList(start.getOutgoing).length >= 2) {
                     let nStart = new Gateway(start.getId, null, GatewayType.AND);
+                    faultBus.addInfo(process, start, FaultType.NON_GATEWAY_MULTIPLE_OUT);
                     nStart.setUI(start.getUI);
                     nStart.addElementId(start.elementIds);
                     process.replaceNode(start, nStart, false);
@@ -582,7 +583,7 @@ const Normalizer = (function () {
                 // We model that with an XOR gateway.
                 if (asList(t.getIncoming).length >= 2) {
                     // Inform about the error.
-                    faultBus.addInfo(process, t, FaultType.TASK_MULTIPLE_IN);
+                    faultBus.addInfo(process, t, FaultType.NON_GATEWAY_MULTIPLE_IN);
 
                     // Create a new XOR-join.
                     let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
@@ -603,7 +604,7 @@ const Normalizer = (function () {
                 // will place a token on all its outgoing flows. We model this explicitly with an
                 // AND gateway.
                 if (asList(t.getOutgoing).length >= 2) {
-                    faultBus.addInfo(process, t, FaultType.TASK_MULTIPLE_OUT);
+                    faultBus.addInfo(process, t, FaultType.NON_GATEWAY_MULTIPLE_OUT);
 
                     // Create a new AND-split diverging the outgoing flows in parallel.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);

@@ -1,7 +1,7 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import $ from 'jquery';
-import {asList, asObject, union} from "../modules/settools.mjs";
+import { asList, asObject, union } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import {explanation as implicitStartExplanation} from "./implicit-start.mjs";
@@ -17,14 +17,14 @@ let visualizerModule = new VisualizerModule(
         let into = union(elements.into, {});
         into[loopEntry.getId] = loopEntry;
         loop.getEdges;
-        visualizer.addClass(loopEntry.getUI$, [ VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE ]);
+        visualizer.addErrorLine(loopEntry.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(loopEntry.getUI$, type, LOOP_ENTRY_IS_AND, (panel) => {
-            visualizer.fadeOut();
-            visualizer.addClass(visualizer.mapToUI(union(loop.getNodes, loop.getEdges)), VisClasses.NON_FADE, true);
-            visualizer.addClass(visualizer.mapModelToBPMNUI(into), [ VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE,
-                VisClasses.NON_FADE], VisClasses.NON_FADE);
-            visualizer.addClass(loopEntry.getUI$, VisClasses.NON_FADE, true);
+            loopEntry = asObject([ loopEntry ]);
+            visualizer.setFocus(
+                visualizer.mapModelToBPMNUI(into),
+                visualizer.mapToUI(union(loopEntry, union(loop.getNodes, loop.getEdges)))
+            );
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

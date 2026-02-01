@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import { asList, asObject } from "../modules/settools.mjs";
@@ -12,12 +12,10 @@ let visualizerModule = new VisualizerModule(
     FaultLevel.INFO,
     function (type, process, elements, visualizer, modeler) {
         elements.implicitEnd.forEach(el => {
-            let ui = el.getUI$;
-            visualizer.addClass(ui, [VisClasses.VISUALIZED_LINE, VisClasses.INFO_LINE]);
+            visualizer.addInfoLine(el.getUI$);
             let closerAction = () => {};
             visualizer.addOverlay(el.getUI$, type, IMPLICIT_END, (panel) => {
-                visualizer.fadeOut();
-                visualizer.addClass(ui, VisClasses.NON_FADE, true);
+                visualizer.setFocus(null, el.getUI$);
 
                 closerAction = this.getExplanation(panel, elements, modeler);
             }, () => { closerAction(); });

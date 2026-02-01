@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import { GatewayType } from "../modules/model.mjs";
 import { asList, asObject, union } from "../modules/settools.mjs";
@@ -13,25 +13,20 @@ let visualizerModule = new VisualizerModule(
     FaultLevel.ERROR,
     function (type, process, elements, visualizer, modeler) {
         let intersectionPoint = elements.intersectionPoint;
-        visualizer.addClass(intersectionPoint.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+        visualizer.addErrorLine(intersectionPoint.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(intersectionPoint.getUI$, type, POTENTIAL_LACK_OF_SYNCHRONIZATION, (panel) => {
-            let split = elements.split;
+            let split = asObject([ elements.split ]);
             let postset = elements.postset;
             let paths = elements.paths;
-            visualizer.fadeOut();
-            let causeUI = split.getUI$;
-            visualizer.addClass(causeUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
-                VisClasses.NON_FADE);
-            let extendedPostset = union({}, postset);
-            extendedPostset[split.getId] = split;
-            let subCauseUI = visualizer.mapModelToBPMNUI(extendedPostset);
-            visualizer.addClass(subCauseUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
-                VisClasses.NON_FADE);
-            visualizer.addClass(intersectionPoint.getUI$, VisClasses.NON_FADE, true);
-            asList(paths).forEach(path => {
-                visualizer.addClass(visualizer.mapModelToBPMNUI(path), VisClasses.NON_FADE, true);
+            let nonFade = asList(paths).reduce((all, path) => {
+                return union(all, path);
             });
+            nonFade[intersectionPoint.getId] = intersectionPoint;
+            visualizer.setFocus(
+                visualizer.mapModelToBPMNUI(union(split, postset)),
+                visualizer.mapModelToBPMNUI(nonFade)
+            );
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

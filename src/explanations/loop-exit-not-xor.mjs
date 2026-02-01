@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import { GatewayType } from "../modules/model.mjs";
 import $ from 'jquery';
@@ -17,15 +17,14 @@ let visualizerModule = new VisualizerModule(
         let out = union(elements.out, {});
         out[loopExit.getId] = loopExit;
         loop.getEdges;
-        visualizer.addClass(loopExit.getUI$, [ VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE ]);
+        visualizer.addErrorLine(loopExit.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(loopExit.getUI$, type, LOOP_EXIT_NOT_XOR, (panel) => {
-            visualizer.fadeOut();
-
-            visualizer.addClass(visualizer.mapModelToBPMNUI(union(loop.getNodes, loop.getEdges)), VisClasses.NON_FADE, true);
-            visualizer.addClass(visualizer.mapModelToBPMNUI(out), [ VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE,
-                VisClasses.NON_FADE], VisClasses.NON_FADE);
-            visualizer.addClass(loopExit.getUI$, VisClasses.NON_FADE, true);
+            loopExit = asObject([ loopExit ]);
+            visualizer.setFocus(
+                visualizer.mapModelToBPMNUI(out),
+                visualizer.mapModelToBPMNUI(union(loopExit, union(loop.getNodes, loop.getEdges)))
+            )
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

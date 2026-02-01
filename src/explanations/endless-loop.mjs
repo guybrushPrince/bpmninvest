@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import { GatewayType } from "../modules/model.mjs";
 import { asList, asObject, union } from "../modules/settools.mjs";
@@ -15,18 +15,15 @@ let visualizerModule = new VisualizerModule(
         let intersectionPoint = elements.intersectionPoint;
         let split = elements.split;
         let postset = elements.postset;
-        visualizer.addClass(split.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+        visualizer.addErrorLine(split.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(split.getUI$, type, POTENTIAL_ENDLESS_LOOP, (panel) => {
             visualizer.fadeOut();
-            let causeUI = intersectionPoint.getUI$;
-            visualizer.addClass(causeUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
-                VisClasses.NON_FADE);
-            let subCauseUI = visualizer.mapToUI(postset);
-            visualizer.addClass(subCauseUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
-                VisClasses.NON_FADE);
-            visualizer.addClass(split.getUI$, VisClasses.NON_FADE, true);
-            visualizer.addClass(visualizer.mapToUI(union(process.getNodes, process.getEdges)), VisClasses.NON_FADE, true);
+            intersectionPoint = asObject([ intersectionPoint ]);
+            let causesUI = visualizer.mapToUI(union(intersectionPoint, postset));
+            split = asObject([ split] );
+            let nonFade = visualizer.mapToUI(union(split, union(process.getNodes, process.getEdges)));
+            visualizer.setFocus(causesUI, nonFade);
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

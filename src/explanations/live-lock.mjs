@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import { GatewayType } from "../modules/model.mjs";
 import { asList, asObject, union } from "../modules/settools.mjs";
@@ -14,14 +14,10 @@ let visualizerModule = new VisualizerModule(
     function (type, process, elements, visualizer, modeler) {
         let loopModel = elements.loop;
         let entry = elements.refEntry;
-        visualizer.addClass(entry.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+        visualizer.addErrorLine(entry.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(entry.getUI$, type, LIVE_LOCK, (panel) => {
-            visualizer.fadeOut();
-            let causeUI = entry.getUI$;
-            visualizer.addClass(causeUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
-                VisClasses.NON_FADE);
-            visualizer.addClass(visualizer.mapToUI(union(loopModel.getNodes, loopModel.getEdges)), VisClasses.NON_FADE, true);
+            visualizer.setFocus(entry.getUI$, visualizer.mapToUI(union(loopModel.getNodes, loopModel.getEdges)));
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

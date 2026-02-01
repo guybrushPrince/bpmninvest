@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import { asList, asObject } from "../modules/settools.mjs";
@@ -11,10 +11,9 @@ let visualizerModule = new VisualizerModule(
     function (type, process, information, visualizer, modeler) {
         let element = information.gateway;
         let ui = element.getUI$;
-        visualizer.addClass(ui, [VisClasses.VISUALIZED_LINE, VisClasses.WARNING_LINE]);
-        visualizer.addOverlay(element.getUI$, type, GATEWAY_WITHOUT_MULTIPLE_FLOWS, (panel) => {
-            visualizer.fadeOut();
-            visualizer.addClass(ui, VisClasses.NON_FADE, true);
+        visualizer.addWarningLine(ui);
+        visualizer.addOverlay(ui, type, GATEWAY_WITHOUT_MULTIPLE_FLOWS, (panel) => {
+            visualizer.setFocus(null, ui);
 
             this.getExplanation(panel, information, modeler);
         });

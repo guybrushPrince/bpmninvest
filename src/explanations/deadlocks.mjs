@@ -1,9 +1,9 @@
 import $ from 'jquery';
-import { asList, asObject, intersect } from "../modules/settools.mjs";
+import { asList, asObject } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { flatten } from "array-flatten";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultLevel, FaultType } from "../modules/faultbus.mjs";
 
 const POTENTIAL_DEADLOCK = 'Possible deadlock';
@@ -14,19 +14,17 @@ let visualizerModule = new VisualizerModule(
     function (type, process, elements, visualizer, modeler) {
         let join = elements.join;
         let paths = elements.paths;
-        visualizer.addClass(join.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+        visualizer.addErrorLine(join.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(join.getUI$, type, POTENTIAL_DEADLOCK, (panel) => {
-            visualizer.fadeOut();
+            let flawsUI = [];
             if (asList(elements.flaws).length > 0) {
                 asList(elements.flaws).forEach((flaws) => {
-                    let flawsUI = visualizer.mapModelToBPMNUI(flaws);
-                    visualizer.addClass(flawsUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE,
-                        VisClasses.NON_FADE], VisClasses.NON_FADE);
+                    flawsUI = flawsUI.concat(visualizer.mapModelToBPMNUI(flaws));
                 });
             }
             let pathsUI = flatten(asList(paths).map(p => visualizer.mapModelToBPMNUI(p)));
-            visualizer.addClass(pathsUI, VisClasses.NON_FADE, true);
+            visualizer.setFocus(flawsUI, pathsUI);
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

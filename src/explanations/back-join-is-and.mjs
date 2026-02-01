@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import $ from 'jquery';
 import { asList, asObject } from "../modules/settools.mjs";
@@ -12,14 +12,13 @@ let visualizerModule = new VisualizerModule(
     FaultLevel.ERROR,
     function (type, process, elements, visualizer, modeler) {
         let backJoin = elements.backJoin;
-        visualizer.addClass(backJoin.getUI$, [VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE]);
+        visualizer.addErrorLine(backJoin.getUI$);
         let closerAction = () => {};
         visualizer.addOverlay(backJoin.getUI$, type, LOOP_BACK_JOIN_IS_AND, (panel) => {
-            visualizer.fadeOut();
-            let flawsUI = visualizer.mapModelToBPMNUI(elements.flaws);
-            visualizer.addClass(flawsUI, [VisClasses.VISUALIZED_LINE, VisClasses.PULSATING_LINE, VisClasses.NON_FADE],
-                VisClasses.NON_FADE);
-            visualizer.addClass(visualizer.mapModelToBPMNUI(elements.doBody), VisClasses.NON_FADE, true);
+            visualizer.setFocus(
+                visualizer.mapModelToBPMNUI(elements.flaws),
+                visualizer.mapModelToBPMNUI(elements.doBody)
+            );
 
             closerAction = this.getExplanation(panel, elements, modeler);
         }, () => { closerAction(); });

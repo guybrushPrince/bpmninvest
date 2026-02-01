@@ -122,7 +122,6 @@ const Visualizer = function () {
 
         let enhanceModel = function (type, process, elements, fault) {
             try {
-                console.log(fault, registry);
                 if (fault in registry) registry[fault].getVisualizer(type, process, elements, that, modelerInstance);
                 informAnalysisPanel(fault);
             } catch (exception) {
@@ -221,6 +220,45 @@ const Visualizer = function () {
                 ].join(' '));
             });
         };
+        this.addInfoLine = function (ui) {
+            that.addClass(ui, [
+                VisClasses.VISUALIZED_LINE,
+                VisClasses.INFO_LINE
+            ]);
+        };
+        this.addWarningLine = function (ui) {
+            that.addClass(ui, [
+                VisClasses.VISUALIZED_LINE,
+                VisClasses.WARNING_LINE
+            ]);
+        };
+        this.addErrorLine = function (ui) {
+            that.addClass(ui, [
+                VisClasses.VISUALIZED_LINE,
+                VisClasses.ERROR_LINE
+            ]);
+        };
+
+        this.setFocus = function (toFocus = null, nonFade = null, pulsating = true, warning = false) {
+            that.fadeOut();
+            if (toFocus !== null) {
+                let classes = [
+                    VisClasses.VISUALIZED_LINE,
+                    VisClasses.NON_FADE
+                ];
+                if (pulsating) {
+                    classes = classes.concat([ VisClasses.PULSATING_LINE ]);
+                }
+                if (warning) {
+                    classes = classes.concat([ VisClasses.WARNING_LINE ]);
+                }
+                that.addClass(toFocus, classes, VisClasses.NON_FADE);
+            }
+            if (nonFade !== null) {
+                that.addClass(nonFade, VisClasses.NON_FADE, true);
+            }
+        }
+
         let informAnalysisPanel = function(type) {
             switch (type) {
                 case FaultType.NO_START:
@@ -343,8 +381,7 @@ const Visualizer = function () {
             return [...new Set(asList(set).map(s => s.getUI$))];
         };
         this.mapModelToBPMNUI = function (set) {
-            let uis = PathFinderFactory(modelerInstance).mapNodeSetToBPMN(set).map(b => $('[data-element-id="' + b.id + '"]'));
-            return uis;
+            return PathFinderFactory(modelerInstance).mapNodeSetToBPMN(set).map(b => $('[data-element-id="' + b.id + '"]'));
         };
         this.addClass = function (ui, clazz, withParents = false) {
             if (Array.isArray(clazz)) clazz = clazz.join(' ');
@@ -362,10 +399,8 @@ const Visualizer = function () {
         this.register = function(visualizationModules) {
             if (!Array.isArray(visualizationModules)) visualizationModules = [ visualizationModules ];
             visualizationModules.forEach((visualizationModule) => {
-                console.log('Register', visualizationModule);
                 registry[visualizationModule.getFaultType] = visualizationModule;
                 classes = union(classes, visualizationModule.getClasses);
-                console.log(registry);
             });
         }
     }

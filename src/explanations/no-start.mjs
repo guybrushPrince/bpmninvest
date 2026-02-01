@@ -1,4 +1,4 @@
-import { VisClasses, VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/visualizer.mjs";
 import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
 import $ from "jquery";
 
@@ -9,10 +9,10 @@ let visualizerModule = new VisualizerModule(
     FaultLevel.ERROR,
     function (type, process, elements, visualizer) {
         let ui = $(process.getUI$[0]);
-        visualizer.addClass(ui, [ VisClasses.VISUALIZED_LINE, VisClasses.ERROR_LINE ]);
+        visualizer.addErrorLine(ui);
         visualizer.addOverlay(ui, type, NO_START, (panel) => {
-            visualizer.fadeOut();
-            visualizer.addClass(ui, VisClasses.NON_FADE, true);
+            visualizer.setFocus(null, ui);
+
             this.getExplanation(panel);
         }, () => {}, true);
     }, function (panel) {
