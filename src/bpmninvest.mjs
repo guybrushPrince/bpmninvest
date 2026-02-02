@@ -24,6 +24,7 @@ import { LoopDecomposition } from "./modules/loopdecomp.mjs";
 import { SCC } from "./modules/scc.mjs";
 import { Normalizer } from "./modules/normalize.mjs";
 import { Visualizer } from "./modules/visualizer.mjs";
+import { AnalysisPanel } from "./modules/analysispanel.mjs";
 
 // Load flaw/fault/error modules.
 import { visualizerModule as noStartModule } from './explanations/no-start.mjs';
@@ -92,6 +93,8 @@ Visualizer().register([
     deadlockModule, // 7SV: VA2
     endlessLoopModule // 7SV: VA1 (extended)
 ]);
+
+AnalysisPanel(faultBus);
 
 // Create a container where files can be dropped on to be opened.
 let container = $('#js-drop-zone');
@@ -170,6 +173,7 @@ async function openDiagram(xml) {
     if (lastVisualizer !== null) lastVisualizer.destruct();
     lastVisualizer = null;
     faultBus.clear();
+    AnalysisPanel(faultBus);
     try {
         await modeler.importXML(xml);
         if (enabledAnalysis) analyzeSoundness();

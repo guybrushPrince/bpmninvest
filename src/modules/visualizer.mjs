@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import { faultBus, FaultType } from "./faultbus.mjs";
+import { faultBus } from "./faultbus.mjs";
 import { asList, union } from "./settools.mjs";
 import { PathFinderFactory } from "./pathfinder.mjs";
 
@@ -56,13 +56,6 @@ const Visualizer = function () {
             overlays = modeler.get('overlays');
             elementRegistry = modeler.get('elementRegistry')
             faultBus.subscribe(this);
-            setAnalysisPanel([], [
-                'safeness',
-                'optionToComplete',
-                'properCompletion',
-                'noDeadActivities',
-                'bestPractices'
-            ]);
 
             let b = $('body');
             overallErrorList = $('<div class="' + VisClasses.ERROR_LIST + '"></div>');
@@ -91,9 +84,8 @@ const Visualizer = function () {
         let enhanceModel = function (type, process, elements, fault) {
             try {
                 if (fault in registry) registry[fault].getVisualizer(type, process, elements, that, modelerInstance);
-                informAnalysisPanel(fault);
             } catch (exception) {
-                console.log(exception);
+                console.error(exception);
             }
 
         };
@@ -227,124 +219,7 @@ const Visualizer = function () {
             }
         }
 
-        let informAnalysisPanel = function(type) {
-            switch (type) {
-                case FaultType.NO_START:
-                case FaultType.NO_END: {
-                    setAnalysisPanel([
-                        'optionToComplete',
-                        'properCompletion',
-                        'noDeadActivities',
-                        'bestPractices'
-                    ]);
-                } break;
-                case FaultType.IMPLICIT_START:
-                case FaultType.IMPLICIT_END:
-                case FaultType.GATEWAY_WITHOUT_MULTIPLE_FLOWS: {
-                    setAnalysisPanel([
-                        'bestPractices'
-                    ]);
-                } break;
-                case FaultType.LOOP_EXIT_NOT_XOR: {
-                    setAnalysisPanel([
-                        'safeness',
-                        'properCompletion',
-                        'bestPractices'
-                    ]);
-                } break;
-                case FaultType.LOOP_ENTRY_IS_AND: {
-                    setAnalysisPanel([
-                        'optionToComplete',
-                        'properCompletion',
-                        'noDeadActivities',
-                        'bestPractices'
-                    ]);
-                } break;
-                case FaultType.LOOP_BACK_JOIN_IS_AND: {
-                    setAnalysisPanel([
-                        'optionToComplete',
-                        'properCompletion',
-                        'noDeadActivities'
-                    ]);
-                } break;
-                case FaultType.POTENTIAL_DEADLOCK: {
-                    setAnalysisPanel([
-                        'optionToComplete',
-                        'properCompletion',
-                        'noDeadActivities'
-                    ]);
-                } break;
-                case FaultType.POTENTIAL_LACK_OF_SYNCHRONIZATION:
-                case FaultType.POTENTIAL_ENDLESS_LOOP: {
-                    setAnalysisPanel([
-                        'safeness',
-                        'properCompletion'
-                    ]);
-                } break;
-                case FaultType.LIVE_LOCK: {
-                    setAnalysisPanel([
-                        'properCompletion',
-                        'optionToComplete',
-                        'bestPractices'
-                    ]);
-                } break;
-                case FaultType.DEAD_LOOP: {
-                    setAnalysisPanel([
-                        'noDeadActivities',
-                        'bestPractices'
-                    ]);
-                } break;
-            }
-        };
-        let setAnalysisPanel = function (violated, fulfilled = []) {
-            let safeness = $('#Safeness, #Safeness-icon');
-            let optionToComplete = $('#OptionToComplete, #OptionToComplete-icon');
-            let properCompletion = $('#ProperCompletion, #ProperCompletion-icon');
-            let noDeadActivities = $('#NoDeadActivities, #NoDeadActivities-icon');
-            let bestPractices = $('#BestPractices, #BestPractices-icon');
 
-            if (violated.includes('safeness')) {
-                safeness.removeClass('fulfilled icon-check');
-                safeness.addClass('violated icon-xmark');
-            }
-            if (violated.includes('optionToComplete')) {
-                optionToComplete.removeClass('fulfilled icon-check');
-                optionToComplete.addClass('violated icon-xmark');
-            }
-            if (violated.includes('properCompletion')) {
-                properCompletion.removeClass('fulfilled icon-check');
-                properCompletion.addClass('violated icon-xmark');
-            }
-            if (violated.includes('noDeadActivities')) {
-                noDeadActivities.removeClass('fulfilled icon-check');
-                noDeadActivities.addClass('violated icon-xmark');
-            }
-            if (violated.includes('bestPractices')) {
-                bestPractices.removeClass('fulfilled icon-check');
-                bestPractices.addClass('violated icon-xmark');
-            }
-
-            if (fulfilled.includes('safeness')) {
-                safeness.addClass('fulfilled icon-check');
-                safeness.removeClass('violated icon-xmark');
-            }
-            if (fulfilled.includes('optionToComplete')) {
-                optionToComplete.addClass('fulfilled icon-check');
-                optionToComplete.removeClass('violated icon-xmark');
-            }
-            if (fulfilled.includes('properCompletion')) {
-                properCompletion.addClass('fulfilled icon-check');
-                properCompletion.removeClass('violated icon-xmark');
-            }
-            if (fulfilled.includes('noDeadActivities')) {
-                noDeadActivities.addClass('fulfilled icon-check');
-                noDeadActivities.removeClass('violated icon-xmark');
-            }
-            if (fulfilled.includes('bestPractices')) {
-                bestPractices.addClass('fulfilled icon-check');
-                bestPractices.removeClass('violated icon-xmark');
-            }
-        };
         this.mapToUI = function (set) {
             return [...new Set(asList(set).map(s => s.getUI$))];
         };

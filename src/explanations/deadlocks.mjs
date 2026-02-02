@@ -4,7 +4,8 @@ import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { flatten } from "array-flatten";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import { VisualizerModule } from "../modules/vismodule.mjs";
-import { FaultLevel, FaultType } from "../modules/faultbus.mjs";
+import { StandardFaultType as FaultType } from "../modules/stfaulttypes.mjs";
+import { FaultLevel } from "../modules/faultbus.mjs";
 
 const POTENTIAL_DEADLOCK = 'Possible deadlock';
 

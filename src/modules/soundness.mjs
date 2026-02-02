@@ -2,8 +2,9 @@
 import { asList, union, diff, intersect, asObject } from "./settools.mjs";
 import { Start, Gateway, GatewayType } from "./model.mjs";
 import { StandardFaultType as FaultType } from "./stfaulttypes.mjs";
-import {PathFinderFactory} from "./pathfinder.mjs";
-import {flatten} from "array-flatten";
+import { faultBus } from "./faultbus.mjs";
+import { PathFinderFactory } from "./pathfinder.mjs";
+import { flatten } from "array-flatten";
 
 /**
  * Verifies acyclic process models regarding soundness. It uses two different analyses, one for deadlocks and one for

@@ -41,7 +41,11 @@ const faultBus = (function () {
         // Notify all observers
         this.notify = function (type, process, elements, fault) {
             this.observers.forEach(observer => {
-                observer.notify(type, process, elements, fault);
+                try {
+                    observer.notify(type, process, elements, fault);
+                } catch (exception) {
+                    console.error(exception);
+                }
             });
         };
         this.clear = function () {
