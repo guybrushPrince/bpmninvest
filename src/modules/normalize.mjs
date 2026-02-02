@@ -8,7 +8,8 @@
  * 5. Normalize tasks when they have multiple incoming or multiple outgoing flows.
  * 6. Add tasks between directly connected gateways.
  */
-import { FaultType, faultBus  } from "./faultbus.mjs";
+import { StandardFaultType as FaultType } from "./stfaulttypes.mjs";
+import { faultBus  } from "./faultbus.mjs";
 import {BPMNModel, Process, Start, End, Gateway, GatewayType, Edge, Task, VirtualTask, LoopProcess} from "./model.mjs";
 import {asList, asObject, diff, intersect, isEmpty, union} from "./settools.mjs";
 import {flatten} from "array-flatten";

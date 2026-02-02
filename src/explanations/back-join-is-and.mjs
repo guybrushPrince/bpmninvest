@@ -1,5 +1,6 @@
-import { VisualizerModule } from "../modules/visualizer.mjs";
-import { FaultType, FaultLevel } from "../modules/faultbus.mjs";
+import { VisualizerModule } from "../modules/vismodule.mjs";
+import { StandardFaultType as FaultType } from "../modules/stfaulttypes.mjs";
+import { FaultLevel } from "../modules/faultbus.mjs";
 import $ from 'jquery';
 import { asList, asObject } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";

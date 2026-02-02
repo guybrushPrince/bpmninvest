@@ -1,7 +1,8 @@
 "use strict";
 import { asList, union, diff, intersect } from "./settools.mjs";
 import { BPMNModel, Loop, Gateway, GatewayType } from "./model.mjs";
-import { FaultType, faultBus } from "./faultbus.mjs";
+import { StandardFaultType as FaultType } from "./stfaulttypes.mjs";
+import { faultBus } from "./faultbus.mjs";
 import {PathFinderFactory} from "./pathfinder.mjs";
 
 /**

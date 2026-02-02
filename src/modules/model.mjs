@@ -1,5 +1,6 @@
 import $ from 'jquery';
-import { FaultType, faultBus } from "./faultbus.mjs";
+import { StandardFaultType as FaultType } from "./stfaulttypes.mjs";
+import { faultBus } from "./faultbus.mjs";
 import {asList, asObject, diff, intersect, isObject, union} from "./settools.mjs";
 import { SCC } from "./scc.mjs";
 import {flatten} from "array-flatten";

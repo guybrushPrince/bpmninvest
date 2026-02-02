@@ -1,7 +1,7 @@
 "use strict";
 import { asList, union, diff, intersect, asObject } from "./settools.mjs";
-import { Start, Gateway, GatewayType, Node, blowUpWithEdges, blowUpWithLoopNodes } from "./model.mjs";
-import { FaultType, faultBus } from "./faultbus.mjs";
+import { Start, Gateway, GatewayType } from "./model.mjs";
+import { StandardFaultType as FaultType } from "./stfaulttypes.mjs";
 import {PathFinderFactory} from "./pathfinder.mjs";
 import {flatten} from "array-flatten";
 

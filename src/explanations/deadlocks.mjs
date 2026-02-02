@@ -3,7 +3,7 @@ import { asList, asObject } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { flatten } from "array-flatten";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
-import { VisualizerModule } from "../modules/visualizer.mjs";
+import { VisualizerModule } from "../modules/vismodule.mjs";
 import { FaultLevel, FaultType } from "../modules/faultbus.mjs";
 
 const POTENTIAL_DEADLOCK = 'Possible deadlock';
