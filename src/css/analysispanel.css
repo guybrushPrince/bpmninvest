@@ -1,0 +1,62 @@
+:root {
+    --analysis-panel--fulfilled: #008000ff;
+    --analysis-panel--violated: #ff0000ff;
+}
+
+.content:not(.with-diagram) ~ .analysis-panel {
+    display: none;
+}
+
+.analysis-panel {
+    display: grid;
+    grid-template-columns: 1fr 20px;
+    grid-column-gap: 15px;
+    grid-row-gap: 5px;
+    align-items: center;
+
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: bold;
+    border: solid 1px #cdcdcd;
+
+    bottom: -50px;
+    left: 50%;
+    padding: 5px;
+    position: fixed;
+    transform: translate(-50%, -50%);
+}
+
+.analysis-panel .fulfilled {
+    color: var(--analysis-panel--fulfilled);
+}
+
+.analysis-panel .violated {
+    color: var(--analysis-panel--violated);
+}
+
+.analysis-panel .general-icon.icon-check::before {
+    content: "\e804";
+}
+
+.analysis-panel .general-icon.icon-xmark::before {
+    content: "\e800";
+}
+
+.analysis-panel [class*="general-icon"]::before {
+    font-style: normal;
+    font-weight: normal;
+    speak: none;
+    display: inline-block;
+    text-decoration: inherit;
+    text-align: center;
+    font-variant: normal;
+    text-transform: none;
+}
+
+.analysis-panel .general-icon {
+    font-family: "Font Awesome 5 Free Solid", serif;
+    line-height: 1.2em;
+    box-sizing: border-box;
+    font-size: 18px;
+}

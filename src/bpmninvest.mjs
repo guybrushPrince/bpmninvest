@@ -94,7 +94,7 @@ Visualizer().register([
     endlessLoopModule // 7SV: VA1 (extended)
 ]);
 
-AnalysisPanel(faultBus);
+AnalysisPanel(faultBus).showPanel();
 
 // Create a container where files can be dropped on to be opened.
 let container = $('#js-drop-zone');

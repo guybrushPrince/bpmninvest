@@ -1,5 +1,6 @@
 import { StandardFaultType as FaultType } from "./stfaulttypes.mjs";
 import $ from "jquery";
+import '../css/analysispanel.css';
 
 const StandardAnalysisCategories = {
     SAFENESS: 'safeness',
@@ -16,6 +17,25 @@ const AnalysisPanel = function (faultBus, categories = null) {
 
     function AnalysisPanelFactory(faultBus, categories = null) {
         faultBus.subscribe(this);
+
+        this.showPanel = function (append = null, replace = null, to = null) {
+            if (to === null) to = $('body');
+            if (append === null) append = '';
+            if (replace === null) replace = '<div class="analysis-panel">' +
+                '<div id="Safeness" class="fulfilled">Synchronization</div>' +
+                '<div id="Safeness-icon" class="general-icon icon-check fulfilled"></div>' +
+                '<div id="OptionToComplete" class="fulfilled">Guaranteed termination</div>' +
+                '<div id="OptionToComplete-icon" class="general-icon icon-check fulfilled"></div>' +
+                '<div id="ProperCompletion" class="fulfilled">Unique end event execution</div>' +
+                '<div id="ProperCompletion-icon" class="general-icon icon-check fulfilled"></div>' +
+                '<div id="NoDeadActivities" class="fulfilled">No dead activities</div>' +
+                '<div id="NoDeadActivities-icon" class="general-icon icon-check fulfilled"></div>' +
+                '<div id="BestPractices" class="fulfilled">Used best practices</div>' +
+                '<div id="BestPractices-icon" class="general-icon icon-check fulfilled"></div>' +
+                append +
+                '</div>';
+            to.append(replace);
+        }
 
         this.extend = function (type, wV = () => {}, cV = () => {}) {
             extensions[type] = wV;

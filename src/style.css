@@ -1,10 +1,6 @@
 * {
     box-sizing: border-box;
 }
-:root {
-    --color-property--fulfilled: #008000ff;
-    --color-property--violated: #ff0000ff;
-}
 
 body, html {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -103,10 +99,6 @@ select {
 .content.with-diagram > .intro {
     display: none;
 }
-.content:not(.with-diagram) ~ .analysis {
-    display: none;
-}
-
 
 .content .canvas,
 .content.with-error .canvas {
@@ -202,60 +194,6 @@ select {
          /* chrome、firefox */ url("./css/font-awesome-5/fa.ttf") format("truetype"),
          /* chrome、firefox、opera、Safari, Android, iOS 4.2+*/
          url("./css/font-awesome-5/fa.svg#Font Awesome 5 Free Solid") format("svg"); /* iOS 4.1- */
-}
-
-.analysis {
-    display: grid;
-    grid-template-columns: 1fr 20px;
-    grid-column-gap: 15px;
-    grid-row-gap: 5px;
-    align-items: center;
-
-    background-color: #f8f8f8;
-    border-radius: 3px;
-    font-size: 13px;
-    font-weight: bold;
-    border: solid 1px #cdcdcd;
-
-    bottom: -50px;
-    left: 50%;
-    padding: 5px;
-    position: fixed;
-    transform: translate(-50%, -50%);
-}
-
-.fulfilled {
-    color: var(--color-property--fulfilled);
-}
-
-.violated {
-    color: var(--color-property--violated);
-}
-
-.general-icon.icon-check::before {
-    content: "\e804";
-}
-
-.general-icon.icon-xmark::before {
-    content: "\e800";
-}
-
-[class*="general-icon"]::before {
-    font-style: normal;
-    font-weight: normal;
-    speak: none;
-    display: inline-block;
-    text-decoration: inherit;
-    text-align: center;
-    font-variant: normal;
-    text-transform: none;
-}
-
-.general-icon {
-    font-family: "Font Awesome 5 Free Solid", serif;
-    line-height: 1.2em;
-    box-sizing: border-box;
-    font-size: 18px;
 }
 
 .enable-analysis {
