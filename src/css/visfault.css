@@ -9,7 +9,7 @@
 
 :root {
     --info-color: rgba(50, 100, 200, 0.7);
-    --warning-color: rgb(241, 227, 93, 0.7);
+    --warning-color: rgba(224, 193, 93, 0.7);
     --error-color: rgba(205, 50, 50, 0.7);
     --pulse-color: var(--error-color);
     --hint-color: rgb(255, 244, 158, 1.0);

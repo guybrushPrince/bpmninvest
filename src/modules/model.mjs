@@ -283,6 +283,17 @@ class Task extends Node {
     setSubProcess(subProcess) {
         this.#subProcess = subProcess;
     }
+
+    asDot() {
+        let dot = super.asDot();
+        let boundaries = asList(this.#boundaries);
+        if (boundaries.length >= 0) {
+            dot += boundaries.map((b) => {
+                return 'node' + this.getId.replaceAll('-', '_') + ' -> ' + 'node' + b.getId.replaceAll('-', '_') + '[style="dashed", label="boundary"];';
+            }).join('');
+        }
+        return dot;
+    }
 }
 class VirtualTask extends Node {
     constructor(id) {

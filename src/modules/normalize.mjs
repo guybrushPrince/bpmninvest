@@ -116,6 +116,7 @@ const Normalizer = (function () {
                     component[cur.getId] = cur;
                     // Add all preceding and succeeding nodes to next that are still in the *nodes* list.
                     next = union(next, intersect(union(cur.getPreset, cur.getPostset), nodes));
+                    if (cur instanceof Task) next = union(next, intersect(cur.getBoundaries, nodes));
                 } while (asList(next).length > 0);
                 // If there is just a single component, then we have a connected model.
                 if (components.length === 0 && asList(process.getNodes).length === asList(component).length) {
@@ -188,10 +189,6 @@ const Normalizer = (function () {
                     // We require an inclusive gateway.
                     gatewayKind = GatewayType.OR;
                     // Add a warning to the non-interrupting boundary events.
-                    /*faultBus.addInfo(process, {
-                        task: n,
-                        boundaries: nonInterrupting
-                    }, FaultType.NON_INTERRUPTING);*/
                     isOnPathFromStartToEnd(process, boundaryEvents, n);
                 }
                 let gateway = new Gateway('n' + elementId++, null, gatewayKind);
