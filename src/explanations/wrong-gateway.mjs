@@ -3,6 +3,7 @@ import { StandardFaultType as FaultType } from "../modules/stfaulttypes.mjs";
 import { FaultLevel } from "../modules/faultbus.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import { asList, asObject } from "../modules/settools.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const GATEWAY_WITHOUT_MULTIPLE_FLOWS = 'Wrongly structured gateway';
 
@@ -16,16 +17,14 @@ let visualizerModule = new VisualizerModule(
         visualizer.addOverlay(ui, type, GATEWAY_WITHOUT_MULTIPLE_FLOWS, (panel) => {
             visualizer.setFocus(null, ui);
 
-            this.getExplanation(panel, information, modeler);
+            this.getExplanation(panel, type, information, modeler, visualizer);
         });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, modeler, visualizer) {
         let defectGateway = information.gateway;
-        let pathFinder = PathFinderFactory(modeler);
-        let gatewayElement = pathFinder.mapNodeSetToBPMN(asObject([ defectGateway ])).concat([]);
 
-        gatewayElement = gatewayElement.shift();
         panel.append('<h1>Process Model has a Wrongly Structured Gateway</h1>');
+        visualizer.appendFaultKind(panel, { type: fType, kind: FaultKind.NO_BEST_PRACTICE });
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p>Following the BPMN 2.0.2 specification, a <em>gateway</em> shall diverge or converge ' +
@@ -37,7 +36,6 @@ let visualizerModule = new VisualizerModule(
             'incoming and a single outgoing flow are arbitrary and increase the difficulty to understand the process ' +
             'model.</p>');
 
-        let type = gatewayElement.type.substring(5);
         let inFlows = information.incoming;
         let outFlows = information.outgoing;
 
@@ -49,8 +47,7 @@ let visualizerModule = new VisualizerModule(
         if (outFlows === 0) textOut = 'no outgoing flow';
         if (outFlows >= 2) textOut = inFlows + ' outgoing flows';
 
-        let link = '<a data-element-link=\'' + JSON.stringify(asList(defectGateway.elementIds)) + '\'>' +
-            type  + '</a>';
+        let link = visualizer.getElementLink(defectGateway);
 
         panel.append('<h2>Flaw in your process model</h2>');
         panel.append('<p>Your process model contains the yellow highlighted ' + link + ' that you ' +

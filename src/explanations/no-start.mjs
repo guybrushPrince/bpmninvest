@@ -2,6 +2,7 @@ import { VisualizerModule } from "../modules/vismodule.mjs";
 import { StandardFaultType as FaultType } from "../modules/stfaulttypes.mjs";
 import { FaultLevel } from "../modules/faultbus.mjs";
 import $ from "jquery";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const NO_START = 'No explicit or implicit start event';
 
@@ -14,10 +15,14 @@ let visualizerModule = new VisualizerModule(
         visualizer.addOverlay(ui, type, NO_START, (panel) => {
             visualizer.setFocus(null, ui);
 
-            this.getExplanation(panel);
+            this.getExplanation(panel, type, visualizer);
         }, () => {}, true);
-    }, function (panel) {
+    }, function (panel, fType, visualizer) {
         panel.append('<h1>Process Model has no Start Event</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.STRUCTURAL_FAULT },
+            { type: FaultLevel.INFO, kind: FaultKind.NO_BEST_PRACTICE }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p>Following the BPMN 2.0.2 specification, a BPMN process model requires at least one starting ' +

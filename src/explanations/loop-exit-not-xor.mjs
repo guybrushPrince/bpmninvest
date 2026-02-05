@@ -6,6 +6,7 @@ import $ from 'jquery';
 import { asList, asObject, union } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const LOOP_EXIT_NOT_XOR = 'Wrong loop exit';
 
@@ -27,16 +28,19 @@ let visualizerModule = new VisualizerModule(
                 visualizer.mapModelToBPMNUI(union(loopExit, union(loop.getNodes, loop.getEdges)))
             )
 
-            closerAction = this.getExplanation(panel, elements, modeler);
+            closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
         }, () => { closerAction(); });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let loopExit = information.exit;
-        let pathFinder = PathFinderFactory(modeler);
-        let exitProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ loopExit ])).concat([]);
-        exitProcessElement = exitProcessElement.shift();
+
 
         panel.append('<h1>Loop has a Loop Exit that is not an Exclusive Gateway</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.IMPROPER_LOOP },
+            { type: fType, kind: FaultKind.SEMANTIC_FAULT },
+            { type: FaultLevel.INFO, kind: FaultKind.NO_BEST_PRACTICE }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p><em>Loops</em> are cyclic structures in a process model, in which each node has a path to each ' +
@@ -52,9 +56,8 @@ let visualizerModule = new VisualizerModule(
             'deadlocks.</p>');
 
 
-        let type = exitProcessElement.type.substring(5);
-        let exitLink = '<a data-element-link=\'' + JSON.stringify(asList(loopExit.elementIds)) + '\'>' + type  + '</a>';
-        let exitImplicitExplicit = type.includes('Gateway') ? '' : 'n implicit';
+        let exitLink = visualizer.getElementLink(loopExit);
+        let exitImplicitExplicit = !loopExit.isImplicit ? '' : 'n implicit';
         let inclusiveParallel = loopExit.getKind === GatewayType.AND ? 'parallel' : 'inclusive';
 
         panel.append('<h2>Flaw in your process model</h2>');

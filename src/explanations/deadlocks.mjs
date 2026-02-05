@@ -6,6 +6,7 @@ import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import { VisualizerModule } from "../modules/vismodule.mjs";
 import { StandardFaultType as FaultType } from "../modules/stfaulttypes.mjs";
 import { FaultLevel } from "../modules/faultbus.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const POTENTIAL_DEADLOCK = 'Possible deadlock';
 
@@ -27,16 +28,14 @@ let visualizerModule = new VisualizerModule(
             let pathsUI = flatten(asList(paths).map(p => visualizer.mapModelToBPMNUI(p)));
             visualizer.setFocus(flawsUI, pathsUI);
 
-            closerAction = this.getExplanation(panel, elements, modeler);
+            closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
         }, () => { closerAction(); });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let join = information.join;
-        let pathFinder = PathFinderFactory(modeler);
-        let joinProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ join ])).concat([]);
-        joinProcessElement = joinProcessElement.shift();
 
         panel.append('<h1>Deadlock</h1>');
+        visualizer.appendFaultKind(panel, { type: fType, kind: FaultKind.SEMANTIC_FAULT });
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p>A <em>deadlock</em> is a situation, in which a process model blocks (locally). ' +
@@ -59,9 +58,8 @@ let visualizerModule = new VisualizerModule(
 
 
 
-        let type = joinProcessElement.type.substring(5);
-        let joinLink = '<a data-element-link=\'' + JSON.stringify(asList(join.elementIds)) + '\'>' + type  + '</a>';
-        let implicitExplicit = type.includes('Gateway') ? '' : 'n implicit';
+        let joinLink = visualizer.getElementLink(join);
+        let implicitExplicit = !join.isImplicit ? '' : 'n implicit';
 
         panel.append('<h2>Flaw in your process model</h2>');
         panel.append('<p>You have a' + implicitExplicit + ' converging parallel gateway ' + joinLink + ' in your ' +

@@ -6,6 +6,7 @@ import { asList, asObject, union } from "../modules/settools.mjs";
 import $ from "jquery";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const POTENTIAL_ENDLESS_LOOP = 'Possible endless loop';
 
@@ -26,21 +27,20 @@ let visualizerModule = new VisualizerModule(
             let nonFade = visualizer.mapToUI(union(split, union(process.getNodes, process.getEdges)));
             visualizer.setFocus(causesUI, nonFade);
 
-            closerAction = this.getExplanation(panel, elements, modeler);
+            closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
         }, () => { closerAction(); });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let diverging = information.split;
         let isParallelStart = diverging.isDivergingStart;
         let converging = information.intersectionPoint;
 
-        let pathFinder = PathFinderFactory(modeler);
-        let divergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ diverging ])).concat([]);
-        divergingProcessElement = divergingProcessElement.shift();
-        let convergingProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ converging ])).concat([]);
-        convergingProcessElement = convergingProcessElement.shift();
 
         panel.append('<h1>Endless Loop because of Missing Synchronization</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.IMPROPER_LOOP },
+            { type: fType, kind: FaultKind.SEMANTIC_FAULT }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p>Diverging parallel and inclusive gateways (may) result in concurrent control flows executing ' +
@@ -59,14 +59,12 @@ let visualizerModule = new VisualizerModule(
 
 
         panel.append('<h2>Flaw in your process model</h2>');
-        let joinType = convergingProcessElement.type.substring(5);
-        let joinLink = '<a data-element-link=\'' + JSON.stringify(asList(converging.elementIds)) + '\'>' + joinType  + '</a>';
-        let joinImplicitExplicit = joinType.includes('Gateway') ? '' : 'n implicit';
+        let joinLink = visualizer.getElementLink(converging);;
+        let joinImplicitExplicit = !converging.isImplicit ? '' : 'n implicit';
 
         if (!isParallelStart) {
-            let splitType = divergingProcessElement.type.substring(5);
-            let splitLink = '<a data-element-link=\'' + JSON.stringify(asList(diverging.elementIds)) + '\'>' + splitType  + '</a>';
-            let implicitExplicit = splitType.includes('Gateway') ? '' : 'n implicit';
+            let splitLink = visualizer.getElementLink(diverging);
+            let implicitExplicit = !diverging.isImplicit ? '' : 'n implicit';
             let parallelInclusive = (diverging.getKind === GatewayType.AND ? 'parallel' : 'inclusive');
 
             panel.append('<p>You have used a' + implicitExplicit + ' diverging ' + parallelInclusive + ' gateway, a ' +

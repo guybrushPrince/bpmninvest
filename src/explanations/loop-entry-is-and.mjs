@@ -6,6 +6,7 @@ import { asList, asObject, union } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import {explanation as implicitStartExplanation} from "./implicit-start.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const LOOP_ENTRY_IS_AND = 'Wrong loop entry';
 
@@ -27,16 +28,19 @@ let visualizerModule = new VisualizerModule(
                 visualizer.mapToUI(union(loopEntry, union(loop.getNodes, loop.getEdges)))
             );
 
-            closerAction = this.getExplanation(panel, elements, modeler);
+            closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
         }, () => { closerAction(); });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let entry = information.entry;
         let pathFinder = PathFinderFactory(modeler);
-        let entryProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ entry ])).concat([]);
-        entryProcessElement = entryProcessElement.shift();
 
         panel.append('<h1>Loop has a Loop Entry that is a Parallel Gateway</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.IMPROPER_LOOP },
+            { type: fType, kind: FaultKind.SEMANTIC_FAULT },
+            { type: FaultLevel.INFO, kind: FaultKind.NO_BEST_PRACTICE }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p><em>Loops</em> are cyclic structures in a process model, in which each node has a path to each ' +
@@ -50,9 +54,8 @@ let visualizerModule = new VisualizerModule(
             'the loop). In both cases, there is <em>deadlock</em>, which hinders a proper option to complete and may ' +
             'lead to dead activies.</p>');
 
-        let type = entryProcessElement.type.substring(5);
-        let entryLink = '<a data-element-link=\'' + JSON.stringify(asList(entry.elementIds)) + '\'>' + type  + '</a>';
-        let implicitExplicit = type.includes('Gateway') ? '' : 'n implicit';
+        let entryLink = visualizer.getElementLink(entry);
+        let implicitExplicit = !entry.isImplicit ? '' : 'n implicit';
 
         panel.append('<h2>Flaw in your process model</h2>');
         panel.append('<p>The loop being visualized by strong lined elements in the editor has a <em>loop entry</em> as ' +

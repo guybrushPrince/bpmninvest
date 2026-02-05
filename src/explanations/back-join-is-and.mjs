@@ -5,6 +5,7 @@ import $ from 'jquery';
 import { asList, asObject } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const LOOP_BACK_JOIN_IS_AND = 'Possible deadlock';
 
@@ -21,16 +22,18 @@ let visualizerModule = new VisualizerModule(
                 visualizer.mapModelToBPMNUI(elements.doBody)
             );
 
-            closerAction = this.getExplanation(panel, elements, modeler);
+            closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
         }, () => { closerAction(); });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let backJoin = information.backJoin;
-        let pathFinder = PathFinderFactory(modeler);
-        let backJoinProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ backJoin ])).concat([]);
-        backJoinProcessElement = backJoinProcessElement.shift();
 
         panel.append('<h1>Inner Loop Node blocks Initially</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.IMPROPER_LOOP },
+            { type: fType, kind: FaultKind.SEMANTIC_FAULT },
+            { type: FaultLevel.INFO, kind: FaultKind.NO_BEST_PRACTICE }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p><em>Loops</em> are cyclic structures in a process model, in which each node has a path to each ' +
@@ -45,9 +48,8 @@ let visualizerModule = new VisualizerModule(
             'and shall not be parallel gateways as they have the potential for a <em>deadlock</em>. This hinders the ' +
             'proper option to complete and may lead to dead activities.</p>');
 
-        let type = backJoinProcessElement.type.substring(5);
-        let backJoinLink = '<a data-element-link=\'' + JSON.stringify(asList(backJoin.elementIds)) + '\'>' + type  + '</a>';
-        let implicitExplicit = type.includes('Gateway') ? '' : 'n implicit';
+        let backJoinLink = visualizer.getElementLink(backJoin);
+        let implicitExplicit = !backJoin.isImplicit ? '' : 'n implicit';
 
         panel.append('<h2>Flaw in your process model</h2>');
         panel.append('<p>The <em>do body</em> being visualized by strong lined elements in the editor has a back join as ' +

@@ -263,7 +263,7 @@ class Task extends Node {
     #boundaries = {};
     #subProcess = null;
 
-    get copy() {
+        get copy() {
         let t = new Task(this.getId, this.getType);
         t.addElementId(this.elementIds);
         t.setUI(this.getUI);
@@ -323,6 +323,7 @@ class Gateway extends Node {
     #kind;
     #divergingStart = false;
     #convergingEnd = false;
+    #implicit = false;
     constructor(id, type, kind = null) {
         super(id, type);
         if (kind === null) {
@@ -347,8 +348,14 @@ class Gateway extends Node {
     setDivergingStart(divStart) { this.#divergingStart = divStart; }
     get isDivergingStart() { return this.#divergingStart; }
 
+    get isImplicit() { return this.#implicit; }
+    setImplicit(implicit) {
+        this.#implicit = implicit;
+    }
+
     get copy() {
         let g = new Gateway(this.getId, this.getType, this.#kind);
+        g.setImplicit(this.isImplicit);
         g.addElementId(this.elementIds);
         g.setUI(this.getUI);
         return g;

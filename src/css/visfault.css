@@ -117,10 +117,6 @@
     text-decoration: underline;
     text-underline-offset: 3px;
 }
-.d-panel a[data-element-link] {
-    cursor: pointer;
-    font-weight: bolder;
-}
 .d-panel #close-panel {
     position: absolute;
     right: 5px;
@@ -240,4 +236,51 @@
 }
 .hint-fade:not(.non-fade) {
     opacity: 0.2;
+}
+
+/* Element-links */
+a[data-element-link] {
+    position: relative;
+    margin-left: 20px;
+    margin-right: 3px;
+    cursor: pointer;
+    font-weight: bolder;
+}
+a[data-element-link] > img {
+    height: 14px;
+    position: absolute;
+    top: -1px;
+    left: -18px;
+}
+
+/* The kind colors. */
+div.kind.info {
+    --kind-back: var(--info-color);
+    --kind-font: var(--light-font);
+}
+div.kind.warning {
+    --kind-back: var(--warning-color);
+    --kind-font: var(--dark-font);
+}
+div.kind.error {
+    --kind-back: var(--error-color);
+    --kind-font: var(--light-font);
+}
+div.kinds {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    margin: 10px 0;
+    gap: 10px;
+}
+div.kind {
+    --kind-back: #aaa;
+    --kind-font: #fff;
+    background: var(--kind-back);
+    color: var(--kind-font);
+    width: fit-content;
+    padding: 5px;
+    border-radius: 3px;
+    font-family: monospace;
 }

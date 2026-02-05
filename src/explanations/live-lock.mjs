@@ -6,6 +6,7 @@ import { asList, asObject, union } from "../modules/settools.mjs";
 import $ from "jquery";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import { PathFinderFactory } from "../modules/pathfinder.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const LIVE_LOCK = 'Endless loop';
 
@@ -20,16 +21,19 @@ let visualizerModule = new VisualizerModule(
         visualizer.addOverlay(entry.getUI$, type, LIVE_LOCK, (panel) => {
             visualizer.setFocus(entry.getUI$, visualizer.mapToUI(union(loopModel.getNodes, loopModel.getEdges)));
 
-            closerAction = this.getExplanation(panel, elements, modeler);
+            closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
         }, () => { closerAction(); });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let entry = information.refEntry;
-        let pathFinder = PathFinderFactory(modeler);
-        let entryProcessElement = pathFinder.mapNodeSetToBPMN(asObject([ entry ])).concat([]);
-        entryProcessElement = entryProcessElement.shift();
+
 
         panel.append('<h1>Live Lock</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.IMPROPER_LOOP },
+            { type: fType, kind: FaultKind.SEMANTIC_FAULT },
+            { type: FaultLevel.INFO, kind: FaultKind.NO_BEST_PRACTICE }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p><em>Loops</em> are cyclic structures in a process model, in which each node has a path to each ' +
@@ -41,9 +45,8 @@ let visualizerModule = new VisualizerModule(
 
         panel.append('<h2>Flaw in your process model</h2>');
 
-        let entryType = entryProcessElement.type.substring(5);
-        let entryLink = '<a data-element-link=\'' + JSON.stringify(asList(entry.elementIds)) + '\'>' + entryType  + '</a>';
-        let entryImplicitExplicit = entryType.includes('Gateway') ? '' : 'implicit';
+        let entryLink = visualizer.getElementLink(entry);
+        let entryImplicitExplicit = !entry.isImplicit ? '' : 'implicit';
 
         let kind = (entry.getKind === GatewayType.AND ? 'parallel' : (entry.getKind === GatewayType.XOR ? 'exclusive' : 'inclusive'));
 

@@ -1,7 +1,12 @@
 import $ from 'jquery';
-import { faultBus } from "./faultbus.mjs";
-import { asList, union } from "./settools.mjs";
+import {faultBus, FaultLevel} from "./faultbus.mjs";
+import {asList, asObject, isObject, union} from "./settools.mjs";
 import { PathFinderFactory } from "./pathfinder.mjs";
+
+import errorIcon from '../icons/error.svg';
+import warningIcon from '../icons/warning.svg';
+import infoIcon from '../icons/info.svg';
+import pointerIcon from '../icons/pointer.svg';
 
 // CSS classes for highlighting BPMN elements.
 const VisClasses = {
@@ -51,18 +56,18 @@ const Visualizer = function () {
 
         let that = this;
 
-        this.initialize = function (modeler, faultBus) {
+        this.initialize = function (modeler, faultBus, to = null) {
             modelerInstance = modeler;
             overlays = modeler.get('overlays');
             elementRegistry = modeler.get('elementRegistry')
             faultBus.subscribe(this);
 
-            let b = $('body');
+            if (to === null) to = $('body');
             overallErrorList = $('<div class="' + VisClasses.ERROR_LIST + '"></div>');
             overallErrorList.append($('<div class="' + VisClasses.ERROR_LIST_TITLE + '">Flaws</div>'));
             errorList = $('<div class="' + VisClasses.ERROR_LIST_LIST + '"></div>');
             overallErrorList.append(errorList);
-            b.append(overallErrorList);
+            to.append(overallErrorList);
         };
 
         this.destruct = function (unsubscribe = true) {
@@ -78,16 +83,11 @@ const Visualizer = function () {
         };
 
         this.notify = function (type, process, elements, fault) {
-            enhanceModel(type, process, elements, fault);
-        };
-
-        let enhanceModel = function (type, process, elements, fault) {
             try {
                 if (fault in registry) registry[fault].getVisualizer(type, process, elements, that, modelerInstance);
             } catch (exception) {
                 console.error(exception);
             }
-
         };
 
         this.addOverlay = function (ui, type, text, detailAction = () => {}, detailClose = () => {}, show = false) {
@@ -97,7 +97,21 @@ const Visualizer = function () {
                     if (!(id in errorNodeMap)) errorNodeMap[id] = $('<div class="' + VisClasses.ERROR_CONTAINER + '"></div>');
                     let infoDiv = errorNodeMap[id];
                     let cl = show ? VisClasses.ANALYSIS_HINT_VISIBLE : VisClasses.ANALYSIS_HINT;
-                    let noteDiv = $('<div class="' + cl + ' ' + type + '"><div>' + text + '</div></div>');
+                    // The icon to print
+                    let img = errorIcon;
+                    let altImg = 'Crucial';
+                    if (type === FaultLevel.WARNING) {
+                        img = warningIcon;
+                        altImg = 'Notable';
+                    } else if (type === FaultLevel.INFO) {
+                        img = infoIcon;
+                        altImg = 'Knowable'
+                    }
+                    // The alternative
+
+                    let noteDiv = $('<div class="' + cl + ' ' + type + '">' +
+                        /*'<div><img src="' + img + '" alt="' + altImg + '"></div>' +*/
+                        '<div>' + text + '</div></div>');
                     let noteDivList = noteDiv.clone();
                     noteDivList.addClass('el');
 
@@ -134,8 +148,9 @@ const Visualizer = function () {
             });
         };
 
-        let openDetailPanel = function (action = () => {}, close = () => {}) {
-            let b = $('body');
+        let openDetailPanel = function (action = () => {}, close = () => {}, to = null) {
+            let b = (to === null ? $('body') : to);
+
             b.find('.' + VisClasses.DETAIL_PANEL).remove();
             that.fadeIn();
             let panel = $('<div class="' + VisClasses.DETAIL_PANEL + '"></div>');
@@ -237,6 +252,32 @@ const Visualizer = function () {
                     u.parents().addClass(cl);
                 }
             });
+            return that;
+        };
+        this.getElementLink = function (element) {
+            if (!Array.isArray(element)) element = [ element ];
+
+            return element.map((el) => {
+                let pathFinder = PathFinderFactory(modelerInstance);
+                let orgs = pathFinder.mapNodeSetToBPMN(asObject([ el ]));
+                let org = orgs.shift();
+                let type = org.type.substring(5);
+                let name = '';
+                if ('businessObject' in org && 'name' in org.businessObject && org.businessObject.name !== '' &&
+                    org.businessObject.name !== null && org.businessObject.name !== undefined) {
+                    name = ' "' + org.businessObject.name + '"';
+                }
+
+                return '<a data-element-link=\'' + JSON.stringify(asList(el.elementIds)) + '\'>' +
+                    '<img src="' + pointerIcon + '" alt="A pointer symbol."> ' + type + name + '</a>';
+            }).join(', ');
+        };
+        this.appendFaultKind = function (panel, typeKinds) {
+            if (!Array.isArray(typeKinds)) typeKinds = [ typeKinds ];
+            let kindContainer = $('<div class="kinds"></div>');
+            typeKinds.forEach(typeKind => kindContainer.append('<div class="kind ' + typeKind.type + '">' + typeKind.kind + '</div>'));
+            panel.append(kindContainer);
+            return that;
         };
 
         this.register = function(visualizationModules) {
@@ -245,6 +286,7 @@ const Visualizer = function () {
                 registry[visualizationModule.getFaultType] = visualizationModule;
                 classes = union(classes, visualizationModule.getClasses);
             });
+            return that;
         }
     }
 

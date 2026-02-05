@@ -197,6 +197,7 @@ const Normalizer = (function () {
                 let gateway = new Gateway('n' + elementId++, null, gatewayKind);
                 gateway.setUI(asList(boundaryEvents).map(b => b.getUI));
                 gateway.addElementId(asList(boundaryEvents).map(b => b.elementIds));
+                gateway.setImplicit(true);
                 process.addNode(gateway);
 
                 // Following p. 151 of the BPMN spec, an activity with multiple outgoing flows
@@ -206,6 +207,7 @@ const Normalizer = (function () {
                 if (asList(n.getOutgoing).length >= 2) {
                     // Add a parallel gateway after the task.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);
+                    g.setImplicit(true);
                     g.setUI(n.getUI);
                     g.addElementId(n.elementIds);
                     process.addNode(g);
@@ -355,6 +357,7 @@ const Normalizer = (function () {
                 xor = explicitStarts[0];
                 if (explicitStarts.length >= 2) {
                     xor = new Gateway('n' + elementId++, null, GatewayType.XOR);
+                    xor.setImplicit(true);
                     xor.setUI(explicitStarts.map((s) => s.getUI));
                     xor.addElementId(flatten(explicitStarts.map((s) => s.elementIds)));
                     process.addNode(xor);
@@ -370,6 +373,7 @@ const Normalizer = (function () {
             if (implicitStarts.length > 0) {
                 if (xor !== null || implicitStarts.length >= 2) {
                     and = new Gateway('n' + elementId++, null, GatewayType.AND);
+                    and.setImplicit(true);
                     and.setUI(implicitStarts.map((s) => s.getUI));
                     and.setDivergingStart(true);
                     and.addElementId(flatten(implicitStarts.map((s) => s.elementIds)));
@@ -409,6 +413,7 @@ const Normalizer = (function () {
             explicitStarts.forEach(function (start) {
                 if (asList(start.getOutgoing).length >= 2) {
                     let nStart = new Gateway(start.getId, null, GatewayType.AND);
+                    nStart.setImplicit(true);
                     faultBus.addInfo(process, start, FaultType.NON_GATEWAY_MULTIPLE_OUT);
                     nStart.setUI(start.getUI);
                     nStart.addElementId(start.elementIds);
@@ -453,6 +458,7 @@ const Normalizer = (function () {
             if (ends.length >= 2) {
                 // Insert an OR/XOR-join to join all ends.
                 or = new Gateway('n' + elementId++, null, (withFaults ? GatewayType.OR : GatewayType.XOR));
+                or.setImplicit(true);
                 or.setUI(ends.map((e) => e.getUI));
                 or.addElementId(flatten(ends.map((e) => e.elementIds)));
                 if (!withFaults && process instanceof LoopProcess) or.setConvergingEnd(true);
@@ -461,6 +467,7 @@ const Normalizer = (function () {
                     if (end instanceof End && asList(end.getIncoming).length >= 2) {
                         // If an end event has multiple incoming flows, make the joining behavior explicit.
                         let nEnd = new Gateway(end.getId, null, GatewayType.OR);
+                        nEnd.setImplicit(true);
                         nEnd.setUI(end.getUI);
                         nEnd.addElementId(end.elementIds);
                         process.replaceNode(end, nEnd, false);
@@ -478,6 +485,7 @@ const Normalizer = (function () {
                 // If the single end event has multiple incoming flows, make its joining behavior explicit.
                 if (end instanceof End && asList(end.getIncoming).length >= 2) {
                     let nEnd = new Gateway(end.getId, null, GatewayType.OR);
+                    nEnd.setImplicit(true);
                     nEnd.setUI(end.getUI);
                     nEnd.addElementId(end.elementIds);
                     process.replaceNode(end, nEnd, false);
@@ -588,6 +596,7 @@ const Normalizer = (function () {
 
                     // Create a new XOR-join.
                     let g = new Gateway('n' + elementId++, null, GatewayType.XOR);
+                    g.setImplicit(true);
                     g.setUI(t.getUI);
                     g.addElementId(t.elementIds);
                     process.addNode(g);
@@ -609,6 +618,7 @@ const Normalizer = (function () {
 
                     // Create a new AND-split diverging the outgoing flows in parallel.
                     let g = new Gateway('n' + elementId++, null, GatewayType.AND);
+                    g.setImplicit(true);
                     g.setUI(t.getUI);
                     g.addElementId(t.elementIds);
                     process.addNode(g);

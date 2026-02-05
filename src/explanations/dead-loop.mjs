@@ -2,6 +2,7 @@ import { VisualizerModule } from "../modules/vismodule.mjs";
 import { StandardFaultType as FaultType } from "../modules/stfaulttypes.mjs";
 import { FaultLevel } from "../modules/faultbus.mjs";
 import { asList, union } from "../modules/settools.mjs";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const DEAD_LOOP = 'Dead loop';
 
@@ -16,11 +17,16 @@ let visualizerModule = new VisualizerModule(
         visualizer.addOverlay(representative.getUI$, type, DEAD_LOOP, (panel) => {
             visualizer.setFocus(loop, null, false);
 
-            this.getExplanation(panel, elements, modeler);
+            this.getExplanation(panel, type, visualizer);
         }, () => { });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, visualizer) {
         panel.append('<h1>Dead Loop</h1>');
+        visualizer.appendFaultKind(panel, [
+            { type: fType, kind: FaultKind.IMPROPER_LOOP },
+            { type: fType, kind: FaultKind.STRUCTURAL_FAULT },
+            { type: FaultLevel.INFO, kind: FaultKind.NO_BEST_PRACTICE }
+        ]);
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p><em>Loops</em> are cyclic structures in a process model, in which each node has a path to each ' +

@@ -5,6 +5,7 @@ import { PathFinderFactory } from "../modules/pathfinder.mjs";
 import { asList, asObject } from "../modules/settools.mjs";
 import { TokenSimulationHandling } from "../modules/simsupport.mjs";
 import $ from "jquery";
+import {FaultKind} from "../modules/faultkind.mjs";
 
 const IMPLICIT_START = 'Implicit start event';
 
@@ -18,18 +19,16 @@ let visualizerModule = new VisualizerModule(
             visualizer.addOverlay(el.getUI$, type, IMPLICIT_START, (panel) => {
                 visualizer.setFocus(null, el.getUI$);
 
-                closerAction = this.getExplanation(panel, elements, modeler);
+                closerAction = this.getExplanation(panel, type, elements, visualizer, modeler);
             }, () => { closerAction(); });
         });
     },
-    function (panel, information, modeler) {
+    function (panel, fType, information, visualizer, modeler) {
         let implicitStart = information.implicitStart[0];
         let explicitStarts = asList(information.simulation.starts);
-        let pathFinder = PathFinderFactory(modeler);
-        let processElement = pathFinder.mapNodeSetToBPMN(asObject(information.implicitStart)).concat([]);
 
-        processElement = processElement.shift();
         panel.append('<h1>Process Model has an Implicit Start Event</h1>');
+        visualizer.appendFaultKind(panel, { type: fType, kind: FaultKind.NO_BEST_PRACTICE });
 
         panel.append('<h2>Explanation</h2>');
         panel.append('<p>Following the BPMN 2.0.2 specification, it is allowed that a BPMN process model may have an ' +
@@ -41,12 +40,11 @@ let visualizerModule = new VisualizerModule(
             'of your process model. For this reason, explicitely use </em>start events</em> in your process models.' +
             '</p>');
 
-        let type = processElement.type.substring(5);
+        let link = visualizer.getElementLink(implicitStart);
 
         panel.append('<h2>Flaw in your process model</h2>');
         panel.append('<p>Your process model contains the blue highlighted <em>implicit start event</em> that you ' +
-            'have modelled as a <a data-element-link=\'' + JSON.stringify(asList(implicitStart.elementIds)) + '\'>' +
-            type  + '</a>.</p>');
+            'have modelled as a ' + link  + '.</p>');
 
         panel.append('<h2>Repair suggestions</h2>');
         panel.append('<p>' +
