@@ -191,7 +191,8 @@ const Visualizer = function () {
                 $('[data-element-id="' + el.id + '"').removeClass([
                     VisClasses.HINT_FADE,
                     VisClasses.NON_FADE,
-                    VisClasses.PULSATING_LINE
+                    VisClasses.PULSATING_LINE,
+                    VisClasses.WARNING_LINE
                 ].join(' '));
             });
         };
@@ -255,19 +256,23 @@ const Visualizer = function () {
             return that;
         };
         this.getElementLink = function (element) {
+            if (isObject(element) && !(element instanceof Node)) {
+                element = asList(element);
+            }
             if (!Array.isArray(element)) element = [ element ];
-
             return element.map((el) => {
                 let pathFinder = PathFinderFactory(modelerInstance);
                 let orgs = pathFinder.mapNodeSetToBPMN(asObject([ el ]));
-                let org = orgs.shift();
-                let type = org.type.substring(5);
-                let name = '';
-                if ('businessObject' in org && 'name' in org.businessObject && org.businessObject.name !== '' &&
-                    org.businessObject.name !== null && org.businessObject.name !== undefined) {
-                    name = ' "' + org.businessObject.name + '"';
+                let type = '', name = '';
+                if (orgs.length >= 1) {
+                    let org = orgs.shift();
+                    type = org.type.substring(5);
+                    name = '';
+                    if ('businessObject' in org && 'name' in org.businessObject && org.businessObject.name !== '' &&
+                        org.businessObject.name !== null && org.businessObject.name !== undefined) {
+                        name = ' "' + org.businessObject.name + '"';
+                    }
                 }
-
                 return '<a data-element-link=\'' + JSON.stringify(asList(el.elementIds)) + '\'>' +
                     '<img src="' + pointerIcon + '" alt="A pointer symbol."> ' + type + name + '</a>';
             }).join(', ');

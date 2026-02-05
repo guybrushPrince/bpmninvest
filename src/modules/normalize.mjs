@@ -310,7 +310,13 @@ const Normalizer = (function () {
                 faultBus.addWarning(process, {
                     task: task,
                     boundaries: badBoundary,
-                    paths: paths
+                    intersections: bad,
+                    paths: paths,
+                    simulation: {
+                        pathToTask: PathFinderFactory().findPathFromStartToTarget(task, process),
+                        task: task,
+                        pathToIntersections: paths
+                    }
                 }, FaultType.NON_INTERRUPTING_BACK);
             }
         };

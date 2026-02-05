@@ -91,7 +91,7 @@ let TokenSimulationHandling = function (modeler) {
             }
         };
 
-        this.setDecisions = function (path) {
+        this.setDecisions = function (path, sendBoundariesTwice = false) {
             if (path === null || path === undefined) return;
             path.forEach(n => {
                 let el = elementRegistry.get(n);
@@ -113,7 +113,16 @@ let TokenSimulationHandling = function (modeler) {
                             let prom = simulationSupport.elementEnter(ref.id);
                             prom.then(() => {
                                 this.controlElement(el.id);
-                                this.controlElement(ref.id);
+                                if (sendBoundariesTwice) {
+                                    setTimeout(() => {
+                                        this.controlElement(el.id);
+                                        this.controlElement(ref.id);
+                                        this.controlElement(ref.id);
+                                    }, 1000);
+                                } else {
+                                    this.controlElement(ref.id);
+                                    this.controlElement(ref.id);
+                                }
                             });
                         }
                     }
