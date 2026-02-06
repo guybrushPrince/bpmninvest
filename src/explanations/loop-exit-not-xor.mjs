@@ -126,6 +126,7 @@ let visualizerModule = new VisualizerModule(
         simHandler.pauseIfExited(exit, (node) => {
             message.append('<p>Starting from this situation, the token on the outgoing flow of the loop exit ' + exitLink +
                     ' can never turn back into the loop.</p>');
+            visualizer.addElementLinkFunctions(message);
         });
         if (exit.getKind === GatewayType.OR) {
             asList(exit.getOutgoing).forEach(f => simHandler.setDecision(exit, f));

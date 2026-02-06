@@ -117,6 +117,7 @@ let visualizerModule = new VisualizerModule(
 
         simHandler.pauseIfEntered(backJoin, (node) => {
             message.append('<p>From this moment, the execution is locally blocked in this ' + backJoinLink + '.</p>');
+            visualizer.addElementLinkFunctions(message);
         }, false);
 
         simButton.on('click', function () {

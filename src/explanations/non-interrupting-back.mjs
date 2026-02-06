@@ -118,11 +118,13 @@ let visualizerModule = new VisualizerModule(
 
         simHandler.pauseIfEntered(information.task, (node) => {
             message.append('<p>From this moment, each firing of ' + boundaryLink + ' will lead to an addition token.</p>');
+            visualizer.addElementLinkFunctions(message);
         }, false);
 
         asList(information.intersections).forEach((intersection) => {
             simHandler.pauseIfExited(intersection, (node) => {
                 message.append('<p>All tasks after ' + intersectionLink + ' will be executed twice.</p>');
+                visualizer.addElementLinkFunctions(message);
             });
         });
 

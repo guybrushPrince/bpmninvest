@@ -1,7 +1,8 @@
 import $ from 'jquery';
-import {faultBus, FaultLevel} from "./faultbus.mjs";
-import {asList, asObject, isObject, union} from "./settools.mjs";
+import { faultBus, FaultLevel } from "./faultbus.mjs";
+import { asList, asObject, isObject, union } from "./settools.mjs";
 import { PathFinderFactory } from "./pathfinder.mjs";
+import { Node } from "./model.mjs";
 
 import errorIcon from '../icons/error.svg';
 import warningIcon from '../icons/warning.svg';
@@ -13,7 +14,8 @@ const VisClasses = {
     INFO_LINE: 'info-line',
     WARNING_LINE: 'warning-line',
     ERROR_LINE: 'error-line',
-    PULSATING_LINE: 'error-pulse',
+    PULSATING_ERROR_LINE: 'error-pulse',
+    PULSATING_WARNING_LINE: 'warning-pulse',
     VISUALIZED_LINE: 'vis-line',
 
     ANALYSIS_HINT: 'note',
@@ -166,19 +168,7 @@ const Visualizer = function () {
             let panelCanvas = $('<div></div>');
             panel.append(panelCanvas);
             action(panelCanvas);
-            panel.find('a[data-element-link]').on('mouseover', function () {
-                let link = $(this).data('element-link');
-                if (link !== null && link !== undefined) {
-                    let sel = link.map(l => '[data-element-id="' + l + '"]').join(',');
-                    $(sel).addClass(VisClasses.HIGHLIGHT);
-                }
-            }).on('mouseout', function () {
-                let link = $(this).data('element-link');
-                if (link !== null && link !== undefined) {
-                    let sel = link.map(l => '[data-element-id="' + l + '"]').join(',');
-                    $(sel).removeClass(VisClasses.HIGHLIGHT);
-                }
-            });
+            that.addElementLinkFunctions(panel);
         }
 
         this.fadeOut = function () {
@@ -191,8 +181,8 @@ const Visualizer = function () {
                 $('[data-element-id="' + el.id + '"').removeClass([
                     VisClasses.HINT_FADE,
                     VisClasses.NON_FADE,
-                    VisClasses.PULSATING_LINE,
-                    VisClasses.WARNING_LINE
+                    VisClasses.PULSATING_ERROR_LINE,
+                    VisClasses.PULSATING_WARNING_LINE
                 ].join(' '));
             });
         };
@@ -223,10 +213,8 @@ const Visualizer = function () {
                     VisClasses.NON_FADE
                 ];
                 if (pulsating) {
-                    classes = classes.concat([ VisClasses.PULSATING_LINE ]);
-                }
-                if (warning) {
-                    classes = classes.concat([ VisClasses.WARNING_LINE ]);
+                    if (!warning) classes = classes.concat([ VisClasses.PULSATING_ERROR_LINE ]);
+                    else classes = classes.concat([ VisClasses.PULSATING_WARNING_LINE ]);
                 }
                 that.addClass(toFocus, classes, VisClasses.NON_FADE);
             }
@@ -277,6 +265,23 @@ const Visualizer = function () {
                     '<img src="' + pointerIcon + '" alt="A pointer symbol."> ' + type + name + '</a>';
             }).join(', ');
         };
+
+        this.addElementLinkFunctions = function (panel) {
+            panel.find('a[data-element-link]').on('mouseover', function () {
+                let link = $(this).data('element-link');
+                if (link !== null && link !== undefined) {
+                    let sel = link.map(l => '[data-element-id="' + l + '"]').join(',');
+                    $(sel).addClass(VisClasses.HIGHLIGHT);
+                }
+            }).on('mouseout', function () {
+                let link = $(this).data('element-link');
+                if (link !== null && link !== undefined) {
+                    let sel = link.map(l => '[data-element-id="' + l + '"]').join(',');
+                    $(sel).removeClass(VisClasses.HIGHLIGHT);
+                }
+            });
+        };
+
         this.appendFaultKind = function (panel, typeKinds) {
             if (!Array.isArray(typeKinds)) typeKinds = [ typeKinds ];
             let kindContainer = $('<div class="kinds"></div>');

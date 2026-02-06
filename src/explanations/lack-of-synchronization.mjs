@@ -134,6 +134,7 @@ let visualizerModule = new VisualizerModule(
         });
         simHandler.pauseIfExited(simInformation.sync, (node) => {
             message.append('<p>From this moment, there is an additional token that arrives at the ' + joinLink + '.</p>');
+            visualizer.addElementLinkFunctions(message);
         });
 
         simButton.on('click', function () {

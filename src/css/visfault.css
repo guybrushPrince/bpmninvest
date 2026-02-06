@@ -139,6 +139,7 @@
     padding: 5px;
     border-radius: 5px;
     background: var(--info-color);
+    color: var(--light-font);
 }
 
 .error-list {
@@ -166,9 +167,10 @@
     letter-spacing: 2px;
 }
 
-.highlight {
-    --shadow: 0 0 12px var(--info-color);
-    filter: drop-shadow(var(--shadow));
+.bjs-container.simulation .highlight .djs-outline {
+    visibility: visible;
+    display: inherit !important;
+    stroke: var(--element-selected-outline-stroke-color);
 }
 .vis-line {
     transition: all 0.5s ease-in-out;
@@ -188,11 +190,13 @@
     --stroke-color: var(--error-color);
     --pulse-color: var(--error-color);
 }
-.error-pulse.warning-line {
+.warning-pulse {
+    animation: pulse 2s infinite;
     --stroke-color: var(--warning-color);
     --pulse-color: var(--warning-color);
 }
-.error-pulse.info-line {
+.info-pulse {
+    animation: pulse 2s infinite;
     --stroke-color: var(--info-color);
     --pulse-color: var(--info-color);
 }
@@ -236,6 +240,9 @@
 }
 .hint-fade:not(.non-fade) {
     opacity: 0.2;
+}
+.hint-fade.highlight {
+    opacity: 1;
 }
 
 /* Element-links */

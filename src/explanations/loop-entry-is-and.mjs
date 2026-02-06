@@ -139,6 +139,7 @@ let visualizerModule = new VisualizerModule(
             simHandler.pauseIfEntered(entry, (node) => {
                 message.append('<p>From this moment, the execution is locally blocked in the loop entry gateway ' +
                     entryLink + '.</p>');
+                visualizer.addElementLinkFunctions(message);
             });
         }, false);
 
