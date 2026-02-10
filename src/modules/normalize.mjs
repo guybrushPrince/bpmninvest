@@ -250,7 +250,10 @@ const Normalizer = (function () {
         let isOnPathFromStartToEnd = function (process, boundaries, task) {
             // Determine all nodes between start and ends without passing the current boundary event.
             let shallNotReach = {};
-            let next = asObject(process.getStarts);
+            // Since the model is not normalized yet, we may not have explicit start nodes.
+            let starts = asList(process.getNodes).filter((n) => asList(n.getIncoming).length === 0);
+            let next = [];
+            next = next.concat(starts);
             do {
                 next = asList(next);
                 let cur =  next.shift();
@@ -313,7 +316,7 @@ const Normalizer = (function () {
                     intersections: bad,
                     paths: paths,
                     simulation: {
-                        pathToTask: PathFinderFactory().findPathFromStartToTarget(task, process),
+                        pathToTask: PathFinderFactory().findPathFromStartToTarget(task, process, null, [], starts),
                         task: task,
                         pathToIntersections: paths
                     }
