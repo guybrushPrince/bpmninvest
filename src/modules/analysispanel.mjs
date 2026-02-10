@@ -182,6 +182,9 @@ const AnalysisPanel = function (faultBus, categories = null) {
         this.categories = categories;
         setAnalysisPanel([], this.categories);
 
+        this.reset = function () {
+            setAnalysisPanel([], this.categories);
+        };
         this.notify = function (type, process, elements, fault) {
             informAnalysisPanel(fault);
         };

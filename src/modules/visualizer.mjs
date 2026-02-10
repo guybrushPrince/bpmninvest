@@ -83,7 +83,9 @@ const Visualizer = function () {
                 overallErrorList.removeClass(VisClasses.SELECTED);
             }
         };
-
+        this.reset = function () {
+            this.destruct();
+        };
         this.notify = function (type, process, elements, fault) {
             try {
                 if (fault in registry) registry[fault].getVisualizer(type, process, elements, that, modelerInstance);

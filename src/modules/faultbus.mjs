@@ -38,6 +38,11 @@ const faultBus = (function () {
             this.observers = this.observers.filter((observer) => observer !== ob);
         };
 
+        // Reset observers
+        this.reset = function () {
+            this.observers.forEach(observer => observer.reset());
+        };
+
         // Notify all observers
         this.notify = function (type, process, elements, fault) {
             this.observers.forEach(observer => {

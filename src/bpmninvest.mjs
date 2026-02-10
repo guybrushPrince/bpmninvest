@@ -111,20 +111,16 @@ let modeler = new BpmnModeler({
 // Get the event bus to start the soundness checking on each change of the model.
 let eventBus = modeler.get('eventBus');
 
-// Each soundness checking routine has a visualizer highlighting the errors in the model.
-// If there is any change, the last visualizer has to be destructed.
-let lastVisualizer = null;
-
 let enabledAnalysis = true;
 
 // The function to start analyzing soundness.
 let analyzeSoundness = (function() {
     return async function() {
         const startTime = performance.now()
-        // Initialize the visualizer
-        if (lastVisualizer !== null) lastVisualizer.destruct();
-        lastVisualizer = Visualizer();
-        lastVisualizer.initialize(modeler, faultBus);
+        faultBus.reset();
+        // Each soundness checking routine has a visualizer highlighting the errors in the model.
+        let visualizer = Visualizer();
+        visualizer.initialize(modeler, faultBus);
         let extractor = ModelExtractor();
         let model = extractor.extractDiagram(modeler);
         const startAnalysisTime = performance.now()
@@ -170,8 +166,7 @@ function createNewDiagram() {
  * @returns {Promise<void>}
  */
 async function openDiagram(xml) {
-    if (lastVisualizer !== null) lastVisualizer.destruct();
-    lastVisualizer = null;
+    faultBus.reset();
     faultBus.clear();
     AnalysisPanel(faultBus);
     try {
@@ -341,7 +336,7 @@ $(function () {
                 .removeClass('active')
                 .html('Analysis <span class="bts-toggle"><span class="bts-icon ">' + ToggleOffIcon() + '</span></span>');
             $('.analysis').hide();
-            if (lastVisualizer !== null) lastVisualizer.destruct();
+            faultBus.reset();
         }
     });
 
