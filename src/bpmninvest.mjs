@@ -57,6 +57,12 @@ import wrongLoopEntry2 from './example/wrong-loop-entry-2.bpmn';
 import deadlockDuringLoopInitialization from './example/deadlock-during-loop-initialization.bpmn';
 import possibleEndlessLoop from './example/possible-endless-loop.bpmn';
 
+import FundBPMFig512a from './example/fundbpm/Fund-BPM-Fig-5-12-a.bpmn';
+import FundBPMFig512b from './example/fundbpm/Fund-BPM-Fig-5-12-b.bpmn';
+import FundBPMFig513a from './example/fundbpm/Fund-BPM-Fig-5-13-a.bpmn';
+import FundBPMFig513b from './example/fundbpm/Fund-BPM-Fig-5-13-b.bpmn';
+import FundBPMExercise513 from './example/fundbpm/Fund-BPM-Exercise-5-13.bpmn';
+
 import taskMerge from './example/bpmnanalyzer/implicit-task-merge.bpmn';
 import showcase from './example/bpmnanalyzer/showcase.bpmn';
 import reusedEndEvent from './example/bpmnanalyzer/reused-end-event.bpmn';
@@ -389,6 +395,23 @@ $(function () {
             case "possible-endless-loop.bpmn": {
                 openDiagram(possibleEndlessLoop);
             } break;
+
+            case "Fund-BPM-Fig-5-12-a.bpmn": {
+                openDiagram(FundBPMFig512a);
+            } break;
+            case "Fund-BPM-Fig-5-12-b.bpmn": {
+                openDiagram(FundBPMFig512b);
+            } break;
+            case "Fund-BPM-Fig-5-13-a.bpmn": {
+                openDiagram(FundBPMFig513a);
+            } break;
+            case "Fund-BPM-Fig-5-13-b.bpmn": {
+                openDiagram(FundBPMFig513b);
+            } break;
+            case "Fund-BPM-Exercise-5-13.bpmn": {
+                openDiagram(FundBPMExercise513);
+            } break;
+
             case "implicit-task-merge.bpmn": {
                 openDiagram(taskMerge);
             } break;

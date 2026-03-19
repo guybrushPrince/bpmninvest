@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="definitions_793d1020-e08a-4f53-b128-c61827f033c9" targetNamespace="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="Camunda Modeler" exporterVersion="5.7.0">
+  <process id="process_ProcessPlaceHolder" isExecutable="false" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_DiagramPlaceHolder">
+    <bpmndi:BPMNPlane id="BPMNPlane_PlanePlaceHolder" bpmnElement="process_ProcessPlaceHolder" />
+  </bpmndi:BPMNDiagram>
+</definitions>
