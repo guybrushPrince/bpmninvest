@@ -65,7 +65,7 @@ const Normalizer = (function () {
                 if (!withFaults && asList(process.getNodes).length === 0) return;
                 normalizeSingletonProcess(process);
                 process.computeInOut();
-                normalizeBoundaryEvents(process);
+                if (withFaults) normalizeBoundaryEvents(process);
                 process.computeInOut();
                 normalizeStarts(process, withFaults);
                 process.isValid();
